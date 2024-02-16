@@ -1,4 +1,4 @@
-package internal
+package program
 
 import (
 	"fmt"
@@ -6,23 +6,17 @@ import (
 )
 
 var dependencies = []string{
-	"sdm", "zenity",
+	"sdm", "zenity", "rofi",
 }
 
-func checkDependencies() error {
+func mustHaveDependencies() {
 	printDebug("Checking dependencies...")
 	for _, dependency := range dependencies {
 		printDebug(fmt.Sprintf("Checking dependency: %s", dependency))
 		_, err := exec.LookPath(dependency)
 		if err != nil {
-			return err
+			panic(err)
 		}
 	}
-	return nil
-}
-
-func printDebug(msg string) {
-	if *debugMode {
-		fmt.Printf("[DEBUG]: %s\n", msg)
-	}
+	printDebug("Dependencies OK")
 }

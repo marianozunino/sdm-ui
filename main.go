@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/marianozunino/sdm-ui/internal"
+	"github.com/marianozunino/sdm-ui/internal/program"
 )
 
 // execute sdm status and capture all the output
 func main() {
 
-	p := internal.NewProgram()
+	p := program.NewProgram()
 
 	if err := p.Run(); err != nil {
 		fmt.Println(err)
