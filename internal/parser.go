@@ -1,13 +1,15 @@
-package main
+package internal
 
 import (
 	"fmt"
 	"strings"
+
+	"github.com/marianozunino/sdm-ui/internal/storage"
 )
 
-func parseDataSources(output string) []DataSource {
+func parseDataSources(output string) []storage.DataSource {
 	lines := extractSection(output, "DATASOURCE", "SERVER")
-	var dataSources []DataSource
+	var dataSources []storage.DataSource
 	for _, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) >= 5 {
@@ -20,7 +22,7 @@ func parseDataSources(output string) []DataSource {
 			}
 
 			if statusIndex != -1 {
-				dataSource := DataSource{
+				dataSource := storage.DataSource{
 					Name:    fields[0],
 					Status:  strings.Join(fields[1:statusIndex+1], " "),
 					Address: fields[statusIndex+1],
@@ -34,9 +36,9 @@ func parseDataSources(output string) []DataSource {
 	return dataSources
 }
 
-func parseServers(output string) []DataSource {
+func parseServers(output string) []storage.DataSource {
 	lines := extractSection(output, "SERVER", "WEBSITE")
-	var servers []DataSource
+	var servers []storage.DataSource
 	for _, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) >= 5 {
@@ -49,7 +51,7 @@ func parseServers(output string) []DataSource {
 				}
 			}
 			if statusIndex != -1 {
-				server := DataSource{
+				server := storage.DataSource{
 					Name:    fields[0],
 					Status:  strings.Join(fields[1:statusIndex+1], " "),
 					Address: fmt.Sprintf("https://%s", fields[statusIndex+2]),

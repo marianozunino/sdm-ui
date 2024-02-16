@@ -1,37 +1,38 @@
-package main
+package storage
 
 import (
+	"fmt"
 	"os"
 	"path"
 
 	bolt "go.etcd.io/bbolt"
 )
 
-var DatasourceBucketKey []byte = []byte("datasource")
+var datasourceBucketKey []byte = []byte("datasource")
 
-type storage struct {
+type Storage struct {
 	*bolt.DB
 }
 
-func newStorage() *storage {
+func NewStorage() *Storage {
 	execPath, _ := os.Executable()
 	execDir := path.Dir(execPath)
 	db, err := bolt.Open(path.Join(execDir, "sources.db"), 0600, nil)
 	if err != nil {
 		panic(err)
 	}
-	return &storage{
+	return &Storage{
 		db,
 	}
 }
 
-func (s *storage) Close() error {
-	return s.DB.Close()
+func buildBucketKey(email string) []byte {
+	return []byte(fmt.Sprintf("%s:%s", email, datasourceBucketKey))
 }
 
-func (s *storage) storeServers(datasources []DataSource) error {
+func (s *Storage) StoreServers(account string, datasources []DataSource) error {
 	err := s.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists(DatasourceBucketKey)
+		b, err := tx.CreateBucketIfNotExists(buildBucketKey(account))
 
 		if err != nil {
 			return err
@@ -48,10 +49,10 @@ func (s *storage) storeServers(datasources []DataSource) error {
 	return err
 }
 
-func (s *storage) retrieveDatasources() ([]DataSource, error) {
+func (s *Storage) RetrieveDatasources(account string) ([]DataSource, error) {
 	datasources := []DataSource{}
 	err := s.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists(DatasourceBucketKey)
+		b, err := tx.CreateBucketIfNotExists(buildBucketKey(account))
 		if err != nil {
 			return err
 		}
@@ -64,4 +65,8 @@ func (s *storage) retrieveDatasources() ([]DataSource, error) {
 		return nil
 	})
 	return datasources, err
+}
+
+func (s *Storage) Close() error {
+	return s.DB.Close()
 }

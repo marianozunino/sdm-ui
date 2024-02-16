@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"fmt"
@@ -19,4 +19,10 @@ func checkDependencies() error {
 		}
 	}
 	return nil
+}
+
+func printDebug(msg string) {
+	if *debugMode {
+		fmt.Printf("[DEBUG]: %s\n", msg)
+	}
 }
