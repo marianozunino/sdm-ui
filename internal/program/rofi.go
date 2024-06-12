@@ -23,7 +23,6 @@ func (p *Program) executeRofi(args []string) error {
 	cmd := exec.Command("rofi", "-dmenu", "-i", "-p", "Select Data Source")
 	cmd.Stdin = bytesOut
 	rofiOut, err := cmd.Output()
-
 	if err != nil {
 		fmt.Println("[rofi] Failed to execute rofi")
 		return nil
@@ -49,7 +48,7 @@ func (p *Program) executeRofi(args []string) error {
 		message := fmt.Sprintf(dataSource)
 		message += fmt.Sprintf("\n📋 <b>%s</b>", dataSourcePort)
 
-		if strings.HasPrefix(dataSourcePort, "https:") {
+		if strings.HasPrefix(dataSourcePort, "http") {
 			open.Start(dataSourcePort)
 		} else {
 			if clip, err := clipper.GetClipboard(clipper.Clipboards...); err != nil {

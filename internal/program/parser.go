@@ -29,6 +29,10 @@ func parseDataSources(output string) []storage.DataSource {
 					Type:    fields[statusIndex+2],
 					Tags:    strings.Join(fields[statusIndex+3:], " "),
 				}
+				if dataSource.Type == "amazones" {
+					dataSource.Address = fmt.Sprintf("http://%s/_plugin/kibana/app/kibana", dataSource.Address)
+				}
+				spew.Dump(dataSource)
 				dataSources = append(dataSources, dataSource)
 			}
 		}
