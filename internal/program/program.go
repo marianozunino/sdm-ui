@@ -124,7 +124,7 @@ func (p *Program) validateAccount() error {
 
 func printDataSources(dataSources []storage.DataSource, w io.Writer) {
 	const format = "%v\t%v\t%v\n"
-	tw := new(tabwriter.Writer).Init(w, 0, 8, 2, ' ', 0)
+	tw := new(tabwriter.Writer).Init(w, 0, 8, 1, '\t', 0)
 
 	for _, ds := range dataSources {
 		status := "🔒"
@@ -132,9 +132,16 @@ func printDataSources(dataSources []storage.DataSource, w io.Writer) {
 			status = "✅"
 		}
 
-		fmt.Fprintf(tw, format, ds.Name, ds.Address, status)
+		fmt.Fprintf(tw, format, ds.Name, elipsise(ds.Address, 20), status)
 	}
 	tw.Flush()
+}
+
+func elipsise(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
 }
 
 func (p *Program) retryCommand(command func() error) error {
@@ -145,8 +152,10 @@ func (p *Program) retryCommand(command func() error) error {
 			case sdm.Unauthorized:
 				notify.Notify("SDM CLI", "Authenticating... 🔐", "", "")
 				return p.retryCommand(func() error {
-					return p.sdmWrapper.Login(p.account, p.password)
+					p.sdmWrapper.Login(p.account, p.password)
+					return command()
 				})
+
 			case sdm.InvalidCredentials:
 				notify.Notify("SDM CLI", "Authentication error 🔐", "Invalid credentials", "")
 				p.keyring.DeleteSecret(p.account)
