@@ -2,11 +2,14 @@ package program
 
 import (
 	"bytes"
+	"context"
 	"fmt"
-	"os/exec"
-	"regexp"
+	"log"
 	"strings"
 
+	"git.sr.ht/~jcmuller/go-rofi/dmenu"
+	"git.sr.ht/~jcmuller/go-rofi/entry"
+	"github.com/marianozunino/sdm-ui/internal/storage"
 	"github.com/martinlindhe/notify"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/zyedidia/clipper"
@@ -20,46 +23,86 @@ func (p *Program) executeRofi(args []string) error {
 		return err
 	}
 
-	cmd := exec.Command("rofi", "-dmenu", "-i", "-p", "Select Data Source")
-	cmd.Stdin = bytesOut
-	rofiOut, err := cmd.Output()
+	entries := p.createEntriesFromBuffer(bytesOut)
+	selectedEntry, err := p.getSelectionFromDmenu(entries)
 	if err != nil {
-		fmt.Println("[rofi] Failed to execute rofi")
+		return err
+	}
+
+	return p.handleSelectedEntry(selectedEntry)
+}
+
+func (p *Program) createEntriesFromBuffer(buf *bytes.Buffer) []*entry.Entry {
+	var entries []*entry.Entry
+	for _, line := range bytes.Split(buf.Bytes(), []byte("\n")) {
+		entries = append(entries, entry.New(string(line)))
+	}
+	return entries
+}
+
+func (p *Program) getSelectionFromDmenu(entries []*entry.Entry) (string, error) {
+	d := dmenu.New(
+		dmenu.WithPrompt("Select Data Source"),
+		dmenu.WithEntries(entries...),
+	)
+
+	ctx := context.Background()
+	s, err := d.Select(ctx)
+	if err != nil {
+		log.Printf("[rofi] Selection error: %v", err)
+		return "", err
+	}
+
+	fmt.Printf("[rofi] Output: %s\n", s)
+	return s, nil
+}
+
+func (p *Program) handleSelectedEntry(selectedEntry string) error {
+	fields := strings.Fields(selectedEntry)
+
+	if len(fields) < 2 {
+		notify.Notify("SDM CLI", "Resource not found 🔐", "", "")
 		return nil
 	}
-	rofiOut = regexp.MustCompile(`\s+`).ReplaceAll(rofiOut, []byte(" "))
 
-	fmt.Printf("[rofi] Output: %s\n", rofiOut)
+	selectedDS := fields[0]
+	fmt.Printf("[rofi] DataSource: %s\n", selectedDS)
 
-	fmt.Printf("[rofi] Selected: %s\n", rofiOut)
-	dataSource := strings.Split(string(rofiOut), " ")[0]
-	fmt.Printf("[rofi] DataSource: %s\n", dataSource)
-	dataSourcePort := strings.Split(string(rofiOut), " ")[1]
-	fmt.Printf("[rofi] DataSourcePort: %s\n", dataSourcePort)
-
-	if dataSource != "" {
-		if err := p.retryCommand(func() error {
-			return p.sdmWrapper.Connect(dataSource)
-		}); err != nil {
-			return err
-		}
-
-		title := "Data Source Connected 🔌"
-		message := fmt.Sprintf(dataSource)
-		message += fmt.Sprintf("\n📋 <b>%s</b>", dataSourcePort)
-
-		if strings.HasPrefix(dataSourcePort, "http") {
-			open.Start(dataSourcePort)
-		} else {
-			if clip, err := clipper.GetClipboard(clipper.Clipboards...); err != nil {
-				printDebug("[clipper] Failed to get clipboard: " + err.Error())
-			} else {
-				clip.WriteAll(clipper.RegClipboard, []byte(dataSourcePort))
-			}
-		}
-
-		notify.Notify("SDM CLI", title, message, "")
+	if selectedDS == "" {
+		notify.Notify("SDM CLI", "Resource not found 🔐", "", "")
+		return nil
 	}
 
-	return nil
+	ds, err := p.db.GetDatasource(p.account, selectedDS)
+	if err != nil {
+		notify.Notify("SDM CLI", "Resource not found 🔐", "", "")
+		return nil
+	}
+
+	if err := p.retryCommand(func() error {
+		return p.sdmWrapper.Connect(ds.Name)
+	}); err != nil {
+		return err
+	}
+
+	p.notifyDataSourceConnected(ds)
+	return p.executeSync()
 }
+
+func (p *Program) notifyDataSourceConnected(ds storage.DataSource) {
+	title := "Data Source Connected 🔌"
+	message := fmt.Sprintf("%s\n📋 <b>%s</b>", ds.Name, ds.Address)
+
+	if strings.HasPrefix(ds.Address, "http") {
+		open.Start(ds.Address)
+	} else {
+		if clip, err := clipper.GetClipboard(clipper.Clipboards...); err != nil {
+			printDebug("[clipper] Failed to get clipboard: " + err.Error())
+		} else {
+			clip.WriteAll(clipper.RegClipboard, []byte(ds.Address))
+		}
+	}
+
+	notify.Notify("SDM CLI", title, message, "")
+}
+

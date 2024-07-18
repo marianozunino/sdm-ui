@@ -1,3 +1,5 @@
+git.sr.ht/~jcmuller/go-rofi v0.2.0 h1:tVJHqll6nTjshJ8CwtFQyZv+bqk9Wq1s0obJmSfDRqc=
+git.sr.ht/~jcmuller/go-rofi v0.2.0/go.mod h1:nsHQ9DuQzpVqtjXbNL8TY7p4cF1+L1XEZGAg4yhf+iE=
 github.com/akavel/rsrc v0.10.2 h1:Zxm8V5eI1hW4gGaYsJQUhxpjkENuG91ki8B4zCrvEsw=
 github.com/akavel/rsrc v0.10.2/go.mod h1:uLoCtb9J+EyAqh+26kdrTgmzRBFPGOolLWKpdxkKq+c=
 github.com/alessio/shellescape v1.4.1 h1:V7yhSDDn8LP4lc4jS8pFkt0zCnzVJlG5JXy9BVKJUX0=
