@@ -92,10 +92,7 @@ func (p *Program) Run() error {
 	case commandList:
 		return p.executeList(os.Stdout)
 	case commandRofi:
-		if err := p.executeRofi(args); err != nil {
-			return err
-		}
-		return p.executeSync()
+		return p.executeRofi(args)
 	default:
 		return fmt.Errorf("invalid command: '%s'", command)
 	}
@@ -151,11 +148,13 @@ func (p *Program) retryCommand(command func() error) error {
 			switch sdmErr.Code {
 			case sdm.Unauthorized:
 				notify.Notify("SDM CLI", "Authenticating... 🔐", "", "")
-				return p.retryCommand(func() error {
-					p.sdmWrapper.Login(p.account, p.password)
-					return command()
-				})
-
+				err := p.sdmWrapper.Login(p.account, p.password)
+				if err != nil {
+					p.keyring.DeleteSecret(p.account)
+					notify.Notify("SDM CLI", "Authentication error 🔐", err.Error(), "")
+					return err
+				}
+				return command()
 			case sdm.InvalidCredentials:
 				notify.Notify("SDM CLI", "Authentication error 🔐", "Invalid credentials", "")
 				p.keyring.DeleteSecret(p.account)

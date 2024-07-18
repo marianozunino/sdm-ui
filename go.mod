@@ -3,6 +3,7 @@ module github.com/marianozunino/sdm-ui
 go 1.21.6
 
 require (
+	git.sr.ht/~jcmuller/go-rofi v0.2.0
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/stretchr/testify v1.8.4
 	github.com/zalando/go-keyring v0.2.3

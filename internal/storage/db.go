@@ -67,6 +67,17 @@ func (s *Storage) RetrieveDatasources(account string) ([]DataSource, error) {
 	return datasources, err
 }
 
+func (s *Storage) GetDatasource(account string, name string) (DataSource, error) {
+	datasource := DataSource{}
+	err := s.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(buildBucketKey(account))
+		v := b.Get([]byte(name))
+		datasource.Decode(v)
+		return nil
+	})
+	return datasource, err
+}
+
 func (s *Storage) Close() error {
 	return s.DB.Close()
 }
