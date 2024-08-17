@@ -3,7 +3,7 @@ package storage
 import (
 	"bytes"
 	"encoding/gob"
-	"log"
+	"fmt"
 )
 
 type DataSource struct {
@@ -14,24 +14,27 @@ type DataSource struct {
 	Tags    string
 }
 
-func (ds DataSource) Encode() []byte {
-	buf := bytes.Buffer{}
+// Encode serializes the DataSource into a byte slice.
+func (ds DataSource) Encode() ([]byte, error) {
+	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
-	err := enc.Encode(ds)
-	if err != nil {
-		log.Fatal(err)
+	if err := enc.Encode(ds); err != nil {
+		return nil, fmt.Errorf("failed to encode DataSource: %w", err)
 	}
-	return buf.Bytes()
+	return buf.Bytes(), nil
 }
 
-func (ds *DataSource) Decode(data []byte) {
+// Decode deserializes the byte slice into a DataSource.
+func (ds *DataSource) Decode(data []byte) error {
 	dec := gob.NewDecoder(bytes.NewReader(data))
-	err := dec.Decode(ds)
-	if err != nil {
-		log.Fatal(err)
+	if err := dec.Decode(ds); err != nil {
+		return fmt.Errorf("failed to decode DataSource: %w", err)
 	}
+	return nil
 }
 
+// Key returns the key for the DataSource, which is based on its Name.
 func (ds DataSource) Key() []byte {
 	return []byte(ds.Name)
 }
+

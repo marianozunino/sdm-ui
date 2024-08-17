@@ -19,10 +19,38 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package main
+package cmd
 
-import "github.com/marianozunino/sdm-ui/cmd"
+import (
+	"os"
 
-func main() {
-	cmd.Execute()
+	"github.com/adrg/xdg"
+	"github.com/spf13/cobra"
+)
+
+var email string
+var dbPath string
+var verbose bool
+
+// rootCmd represents the base command when called without any subcommands
+var rootCmd = &cobra.Command{
+	Use:   "sdm-ui",
+	Short: "SDM UI - Wrapper for SDM CLI",
+	Long: `SDM UI is a custom wrapper around StrongDM (SDM)
+designed to improve the developer experience (DX) on Linux.`,
+}
+
+func Execute() {
+	err := rootCmd.Execute()
+	if err != nil {
+		os.Exit(1)
+	}
+}
+
+func init() {
+	rootCmd.PersistentFlags().StringVarP(&email, "email", "e", "", "email address")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
+	rootCmd.PersistentFlags().StringVarP(&dbPath, "db", "d", xdg.DataHome, "database path (default: $XDG_DATA_HOME)")
+	rootCmd.MarkPersistentFlagRequired("email")
+	rootCmd.MarkPersistentFlagRequired("e")
 }

@@ -4,22 +4,22 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log"
 	"strings"
 
 	"git.sr.ht/~jcmuller/go-rofi/dmenu"
 	"git.sr.ht/~jcmuller/go-rofi/entry"
 	"github.com/marianozunino/sdm-ui/internal/storage"
 	"github.com/martinlindhe/notify"
+	"github.com/rs/zerolog/log"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/zyedidia/clipper"
 )
 
-func (p *Program) executeRofi(args []string) error {
+func (p *Program) Rofi() error {
 	bytesOut := new(bytes.Buffer)
 
-	if err := p.executeList(bytesOut); err != nil {
-		fmt.Println("[rofi] Failed to execute list")
+	if err := p.List(bytesOut); err != nil {
+		log.Error().Msg(fmt.Sprintf("Failed to execute list: %s", err))
 		return err
 	}
 
@@ -49,11 +49,11 @@ func (p *Program) getSelectionFromDmenu(entries []*entry.Entry) (string, error) 
 	ctx := context.Background()
 	s, err := d.Select(ctx)
 	if err != nil {
-		log.Printf("[rofi] Selection error: %v", err)
+		// log.Printf("[rofi] Selection error: %v", err)
 		return "", err
 	}
 
-	fmt.Printf("[rofi] Output: %s\n", s)
+	log.Debug().Msg(fmt.Sprintf("Output: %s", s))
 	return s, nil
 }
 
@@ -66,14 +66,14 @@ func (p *Program) handleSelectedEntry(selectedEntry string) error {
 	}
 
 	selectedDS := fields[0]
-	fmt.Printf("[rofi] DataSource: %s\n", selectedDS)
+	log.Info().Msg(fmt.Sprintf("DataSource: %s", selectedDS))
 
 	if selectedDS == "" {
 		notify.Notify("SDM CLI", "Resource not found 🔐", "", "")
 		return nil
 	}
 
-	ds, err := p.db.GetDatasource(p.account, selectedDS)
+	ds, err := p.db.GetDatasource(selectedDS)
 	if err != nil {
 		notify.Notify("SDM CLI", "Resource not found 🔐", "", "")
 		return nil
@@ -86,7 +86,7 @@ func (p *Program) handleSelectedEntry(selectedEntry string) error {
 	}
 
 	p.notifyDataSourceConnected(ds)
-	return p.executeSync()
+	return p.Sync()
 }
 
 func (p *Program) notifyDataSourceConnected(ds storage.DataSource) {
@@ -97,7 +97,7 @@ func (p *Program) notifyDataSourceConnected(ds storage.DataSource) {
 		open.Start(ds.Address)
 	} else {
 		if clip, err := clipper.GetClipboard(clipper.Clipboards...); err != nil {
-			printDebug("[clipper] Failed to get clipboard: " + err.Error())
+			log.Debug().Msg(fmt.Sprintf("Failed to get clipboard: %s", err))
 		} else {
 			clip.WriteAll(clipper.RegClipboard, []byte(ds.Address))
 		}
@@ -105,4 +105,3 @@ func (p *Program) notifyDataSourceConnected(ds storage.DataSource) {
 
 	notify.Notify("SDM CLI", title, message, "")
 }
-

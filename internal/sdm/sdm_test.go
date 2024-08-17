@@ -8,6 +8,7 @@ import (
 	"os"
 	_ "os"
 	"slices"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,14 +17,44 @@ import (
 
 const testSdmBehavior = "TEST_SDM_BEHAVIOR"
 
-type testBehavior int
-
-func (b testBehavior) String() string {
-	return fmt.Sprintf("%d", b)
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[cmdReadySuccessBehavior-0]
+	_ = x[cmdReadyNoAccountBehavior-1]
+	_ = x[cmdReadyErrorBehavior-2]
+	_ = x[cmdLoginSuccessBehavior-3]
+	_ = x[cmdLoginErrorNoAccountBehavior-4]
+	_ = x[cmdLoginErrorUnknownBehavior-5]
+	_ = x[cmdLoginInvalidCredentialsBehavior-6]
+	_ = x[cmdLogoutSuccessBehavior-7]
+	_ = x[cmdLogoutNotAuthenticatedBehavior-8]
+	_ = x[cmdLogoutErrorBehavior-9]
+	_ = x[cmdStatusSuccessBehavior-10]
+	_ = x[cmdStatusNotAuthenticatedBehavior-11]
+	_ = x[cmdStatusErrorBehavior-12]
+	_ = x[cmdConnectSuccessBehavior-13]
+	_ = x[cmdConnectNotAuthenticatedBehavior-14]
+	_ = x[cmdConnectResourceNotFoundBehavior-15]
+	_ = x[cmdConnectErrorBehavior-16]
 }
 
+const _TestBehavior_name = "cmdReadySuccessBehaviorcmdReadyNoAccountBehaviorcmdReadyErrorBehaviorcmdLoginSuccessBehaviorcmdLoginErrorNoAccountBehaviorcmdLoginErrorUnknownBehaviorcmdLoginInvalidCredentialsBehaviorcmdLogoutSuccessBehaviorcmdLogoutNotAuthenticatedBehaviorcmdLogoutErrorBehaviorcmdStatusSuccessBehaviorcmdStatusNotAuthenticatedBehaviorcmdStatusErrorBehaviorcmdConnectSuccessBehaviorcmdConnectNotAuthenticatedBehaviorcmdConnectResourceNotFoundBehaviorcmdConnectErrorBehavior"
+
+var _TestBehavior_index = [...]uint16{0, 23, 48, 69, 92, 122, 150, 184, 208, 241, 263, 287, 320, 342, 367, 401, 435, 458}
+
+func (i TestBehavior) String() string {
+	if i < 0 || i >= TestBehavior(len(_TestBehavior_index)-1) {
+		return "TestBehavior(" + strconv.FormatInt(int64(i), 10) + ")"
+	}
+	return _TestBehavior_name[_TestBehavior_index[i]:_TestBehavior_index[i+1]]
+}
+
+type TestBehavior int
+
 const (
-	cmdReadySuccessBehavior testBehavior = iota
+	cmdReadySuccessBehavior TestBehavior = iota
 	cmdReadyNoAccountBehavior
 	cmdReadyErrorBehavior
 	cmdLoginSuccessBehavior
@@ -43,6 +74,10 @@ const (
 	cmdConnectResourceNotFoundBehavior
 	cmdConnectErrorBehavior
 )
+
+// func (b testBehavior) String() string {
+// 	return fmt.Sprintf("%d", b)
+// }
 
 func strPtr(s string) *string {
 	return &s
@@ -65,20 +100,20 @@ func TestMain(m *testing.M) {
 		os.Exit(m.Run())
 
 	case cmdReadySuccessBehavior.String():
-		executeCommand([]string{"ready"}, `{"account":"some.account@email.com","listener_running":true,"state_loaded":true,"is_linked":true}`, 0)
+		executeCommand([]string{"ready"}, `{"account":"some.account@mail.com","listener_running":true,"state_loaded":true,"is_linked":true}`, 0)
 	case cmdReadyNoAccountBehavior.String():
 		executeCommand([]string{"ready"}, `{"listener_running":true,"state_loaded":true,"is_linked":true}`, 0)
 	case cmdReadyErrorBehavior.String():
 		executeCommand([]string{"ready"}, ``, 1)
 
 	case cmdLoginSuccessBehavior.String():
-		executeCommand([]string{"login", "--email", "some.account@email.com"}, `logged in`, 0)
+		executeCommand([]string{"login", "--email", "some.account@mail.com"}, `logged in`, 0)
 	case cmdLoginErrorNoAccountBehavior.String():
-		executeCommand([]string{"login", "--email", "some.account@email.com"}, `This email doesn't have a strongDM account.`, 1)
+		executeCommand([]string{"login", "--email", "some.account@mail.com"}, `This email doesn't have a strongDM account.`, 1)
 	case cmdLoginErrorUnknownBehavior.String():
-		executeCommand([]string{"login", "--email", "some.account@email.com"}, `cannot ask for password`, 1)
+		executeCommand([]string{"login", "--email", "some.account@mail.com"}, `cannot ask for password`, 1)
 	case cmdLoginInvalidCredentialsBehavior.String():
-		executeCommand([]string{"login", "--email", "some.account@email.com"}, `access denied\n`, 1)
+		executeCommand([]string{"login", "--email", "some.account@mail.com"}, `access denied\n`, 1)
 
 	case cmdLogoutSuccessBehavior.String():
 		executeCommand([]string{"logout"}, `logged out`, 0)
@@ -123,9 +158,8 @@ func TestSDMClient_Ready(t *testing.T) {
 				IsLinked:        true,
 				StateLoaded:     true,
 				ListenerRunning: true,
-				Account:         strPtr("some.account@email.com"),
+				Account:         strPtr("some.account@mail.com"),
 			},
-			expectedErr: false,
 		},
 		{
 			name:     "NoAccount",
@@ -141,7 +175,6 @@ func TestSDMClient_Ready(t *testing.T) {
 		{
 			name:     "Error",
 			behavior: cmdReadyErrorBehavior.String(),
-			panics:   true,
 			expected: SdmReady{
 				IsLinked:        true,
 				StateLoaded:     true,
@@ -195,27 +228,27 @@ func TestSDMClient_Login(t *testing.T) {
 		{
 			name:        "SuccessfulLogin",
 			behavior:    cmdLoginSuccessBehavior.String(),
-			email:       "some.account@email.com",
+			email:       "some.account@mail.com",
 			expectedErr: false,
 		},
 		{
 			name:           "ErrorNoAccount",
 			behavior:       cmdLoginErrorNoAccountBehavior.String(),
-			email:          "some.account@email.com",
+			email:          "some.account@mail.com",
 			expectedErr:    true,
 			expectedErrMsg: `This email doesn't have a strongDM account.`,
 		},
 		{
 			name:           "ErrorUnknown",
 			behavior:       cmdLoginErrorUnknownBehavior.String(),
-			email:          "some.account@email.com",
+			email:          "some.account@mail.com",
 			expectedErr:    true,
 			expectedErrMsg: `cannot ask for password`,
 		},
 		{
 			name:           "ErrorInvalidCredentials",
 			behavior:       cmdLoginInvalidCredentialsBehavior.String(),
-			email:          "some.account@email.com",
+			email:          "some.account@mail.com",
 			expectedErr:    true,
 			expectedErrMsg: `access denied\n`,
 		},
@@ -253,7 +286,7 @@ func TestSDMClient_Login(t *testing.T) {
 func TestSDMClient_Logout(t *testing.T) {
 	tests := []struct {
 		name            string
-		behavior        testBehavior
+		behavior        TestBehavior
 		expected        error
 		expectedErr     bool
 		expectedErrMsg  string
@@ -316,7 +349,7 @@ func TestSDMClient_Logout(t *testing.T) {
 func TestSDMClient_Status(t *testing.T) {
 	tests := []struct {
 		name           string
-		behavior       testBehavior
+		behavior       TestBehavior
 		expected       error
 		expectedErr    bool
 		expectedErrMsg string
@@ -377,7 +410,7 @@ func TestSDMClient_Status(t *testing.T) {
 func TestSDMClient_Connect(t *testing.T) {
 	tests := []struct {
 		name            string
-		behavior        testBehavior
+		behavior        TestBehavior
 		expected        error
 		expectedErr     bool
 		expectedErrCode SDMErrorCode

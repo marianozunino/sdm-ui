@@ -15,12 +15,21 @@ go install github.com/marianozunino/sdm-ui
 ## How to use
 
 ```bash
-sdm-ui # to get the help
-sdm-ui -h # to get the help
-sdm-ui -d # to get debug logging
-sdm-ui list # to list the resources (from cache)
-sdm-ui rofi <username> # to connect to a resource
-sdm-ui sync <username> # sync cache with the "sdm status" output
+Usage:
+  sdm-ui [command]
+
+Available Commands:
+  completion  Generate the autocompletion script for the specified shell
+  help        Help about any command
+  list        List SDM resources
+  rofi        Opens dmenu with available data sources
+  sync        Syncronizes the internal cache
+
+Flags:
+  -d, --db string      database path (default: $XDG_DATA_HOME)
+  -e, --email string   email address
+  -h, --help           help for sdm-ui
+  -v, --verbose        verbose output
 ```
 
 ### How does this wrapper solves the above issues?

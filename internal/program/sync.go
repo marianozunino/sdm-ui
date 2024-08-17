@@ -3,11 +3,12 @@ package program
 import (
 	"bytes"
 	"fmt"
+
+	"github.com/rs/zerolog/log"
 )
 
-func (p *Program) executeSync() error {
-	fmt.Printf("[sync] Account: %s\n", p.account)
-	fmt.Println("[sync] Syncing...")
+func (p *Program) Sync() error {
+	log.Debug().Msg("Syncing...")
 	statusesBuffer := new(bytes.Buffer)
 
 	if err := p.retryCommand(func() error {
@@ -19,10 +20,10 @@ func (p *Program) executeSync() error {
 	}
 
 	dataSources := parseDataSources(statusesBuffer.String())
-	p.db.StoreServers(p.account, dataSources)
+	p.db.StoreServers(dataSources)
 
 	servers := parseServers(statusesBuffer.String())
-	p.db.StoreServers(p.account, servers)
+	p.db.StoreServers(servers)
 
 	return nil
 }

@@ -19,10 +19,29 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package main
+package cmd
 
-import "github.com/marianozunino/sdm-ui/cmd"
+import (
+	"github.com/marianozunino/sdm-ui/internal/program"
+	"github.com/spf13/cobra"
+)
 
-func main() {
-	cmd.Execute()
+// rofiCmd represents the rofi command
+var rofiCmd = &cobra.Command{
+	Use:   "rofi",
+	Short: "Opens dmenu with available data sources",
+	Long:  ``,
+	Run: func(cmd *cobra.Command, args []string) {
+		program.NewProgram(
+			program.WithAccount(email),
+			program.WithVerbose(verbose),
+			program.WithDbPath(dbPath),
+		).Rofi()
+
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(rofiCmd)
+
 }

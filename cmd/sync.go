@@ -19,10 +19,27 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package main
+package cmd
 
-import "github.com/marianozunino/sdm-ui/cmd"
+import (
+	"github.com/marianozunino/sdm-ui/internal/program"
+	"github.com/spf13/cobra"
+)
 
-func main() {
-	cmd.Execute()
+// syncCmd represents the sync command
+var syncCmd = &cobra.Command{
+	Use:   "sync",
+	Short: "Syncronizes the internal cache",
+	Long:  ``,
+	Run: func(cmd *cobra.Command, args []string) {
+		program.NewProgram(
+			program.WithAccount(email),
+			program.WithVerbose(verbose),
+			program.WithDbPath(dbPath),
+		).Sync()
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(syncCmd)
 }

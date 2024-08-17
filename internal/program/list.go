@@ -1,23 +1,24 @@
 package program
 
 import (
-	"fmt"
 	"io"
+
+	"github.com/rs/zerolog/log"
 )
 
-func (p *Program) executeList(w io.Writer) error {
-	dataSources, err := p.db.RetrieveDatasources(p.account)
+func (p *Program) List(w io.Writer) error {
+	dataSources, err := p.db.RetrieveDatasources()
 	if err != nil {
 		return err
 	}
 
 	if len(dataSources) == 0 {
-		fmt.Printf("[list] No data sources found, syncing...\n")
-		if err := p.executeSync(); err != nil {
+		log.Info().Msg("No data sources found, syncing...")
+		if err := p.Sync(); err != nil {
 			return err
 		}
 
-		dataSources, err = p.db.RetrieveDatasources(p.account)
+		dataSources, err = p.db.RetrieveDatasources()
 		if err != nil {
 			return err
 		}

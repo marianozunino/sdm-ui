@@ -19,10 +19,29 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package main
+package cmd
 
-import "github.com/marianozunino/sdm-ui/cmd"
+import (
+	"os"
 
-func main() {
-	cmd.Execute()
+	"github.com/marianozunino/sdm-ui/internal/program"
+	"github.com/spf13/cobra"
+)
+
+// listCmd represents the list command
+var listCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List SDM resources",
+	Long:  ``,
+	Run: func(cmd *cobra.Command, args []string) {
+		program.NewProgram(
+			program.WithAccount(email),
+			program.WithVerbose(verbose),
+			program.WithDbPath(dbPath),
+		).List(os.Stdout)
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(listCmd)
 }

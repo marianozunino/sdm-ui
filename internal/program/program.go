@@ -1,118 +1,87 @@
 package program
 
 import (
-	"errors"
-	"flag"
 	"fmt"
 	"io"
-	"os"
 	"text/tabwriter"
 
+	"github.com/adrg/xdg"
 	"github.com/marianozunino/sdm-ui/internal/libsecret"
+	"github.com/marianozunino/sdm-ui/internal/logger"
 	"github.com/marianozunino/sdm-ui/internal/sdm"
 	"github.com/marianozunino/sdm-ui/internal/storage"
-
 	"github.com/martinlindhe/notify"
+	"github.com/rs/zerolog/log"
 )
 
 type commandType string
 
-const (
-	commandSync commandType = "sync"
-	commandList commandType = "list"
-	commandRofi commandType = "rofi"
-)
-
-var (
-	debugMode = flag.Bool("d", false, "enable debug mode")
-	usageMsg  = `Specify a command to execute:
-- list <email>: List all the data sources from CACHE
-- sync <email>: Sync all the data sources
-- rofi <email>: Select & Connect to a data source using rofi`
-)
-
 type Program struct {
-	account  string
-	password string
+	account string
 
-	db         storage.Storage
+	db         *storage.Storage
+	dbPath     string
 	keyring    libsecret.Keyring
 	sdmWrapper sdm.SDMClient
 }
 
-func NewProgram() *Program {
-	return &Program{
-		db: *storage.NewStorage(),
-		sdmWrapper: sdm.SDMClient{
-			Exe: "sdm",
-		},
+type Option func(*Program)
+
+func WithAccount(account string) Option {
+	return func(p *Program) {
+		log.Debug().Msgf("Using account: %s", account)
+		p.account = account
 	}
 }
 
-func parseArgs() (string, []string) {
-	flag.Parse()
-	if len(flag.Args()) < 1 {
-		fmt.Println(usageMsg)
-		os.Exit(1)
-	}
-
-	command := flag.Args()[0]
-	args := flag.Args()[1:]
-
-	return command, args
+func WithVerbose(verbose bool) Option {
+	logger.ConfigureLogger(verbose)
+	return func(p *Program) {}
 }
 
-func (p *Program) Run() error {
-	defer p.db.Close()
+func WithDbPath(dbPath string) Option {
+	return func(p *Program) {
+		p.dbPath = dbPath
+	}
+}
 
+func NewProgram(opts ...Option) *Program {
 	mustHaveDependencies()
 
-	command, args := parseArgs()
-
-	if len(args) == 0 {
-		return errors.New("provide an email address: sdm-ui <command> <email|account>")
+	p := &Program{
+		sdmWrapper: sdm.SDMClient{Exe: "sdm"},
+		dbPath:     xdg.DataHome,
 	}
 
-	p.account = args[0]
-
-	if password, err := p.retrievePassword(); err == nil {
-		p.password = password
-	} else {
-		notify.Notify("SDM CLI", "Authentication error 🔐", err.Error(), "")
-		return err
+	for _, opt := range opts {
+		opt(p)
 	}
 
-	if err := p.validateAccount(); err != nil {
-		return err
+	db, err := storage.NewStorage(p.account, p.dbPath)
+
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to open database")
 	}
 
-	switch commandType(command) {
-	case commandSync:
-		return p.executeSync()
-	case commandList:
-		return p.executeList(os.Stdout)
-	case commandRofi:
-		return p.executeRofi(args)
-	default:
-		return fmt.Errorf("invalid command: '%s'", command)
-	}
+	p.db = db
+
+	return p
 }
 
 func (p *Program) validateAccount() error {
 	status, err := p.sdmWrapper.Ready()
-
 	if err != nil {
 		return err
 	}
 
 	if status.Account != nil && *status.Account != p.account {
-		fmt.Println("[login] Logged in with different account, logging out...")
+		log.Debug().Msg("Logged in with a different account, logging out...")
 		if err := p.sdmWrapper.Logout(); err != nil {
-			if err.(sdm.SDMError).Code == sdm.Unauthorized {
-				// we are already logged out
+			if sdErr, ok := err.(sdm.SDMError); ok && sdErr.Code == sdm.Unauthorized {
+				// Already logged out
 				return nil
 			}
-			return fmt.Errorf("failed to logout: %s", err)
+			return fmt.Errorf("failed to logout: %w", err)
 		}
 	}
 
@@ -121,7 +90,7 @@ func (p *Program) validateAccount() error {
 
 func printDataSources(dataSources []storage.DataSource, w io.Writer) {
 	const format = "%v\t%v\t%v\n"
-	tw := new(tabwriter.Writer).Init(w, 0, 8, 1, '\t', 0)
+	tw := tabwriter.NewWriter(w, 0, 8, 1, '\t', 0)
 
 	for _, ds := range dataSources {
 		status := "🔒"
@@ -129,47 +98,109 @@ func printDataSources(dataSources []storage.DataSource, w io.Writer) {
 			status = "✅"
 		}
 
-		fmt.Fprintf(tw, format, ds.Name, elipsise(ds.Address, 20), status)
+		fmt.Fprintf(tw, format, ds.Name, ellipsize(ds.Address, 20), status)
 	}
 	tw.Flush()
 }
 
-func elipsise(s string, maxLen int) string {
+func ellipsize(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
 	}
 	return s[:maxLen] + "..."
 }
 
+// func (p *Program) retryCommand(command func() error) error {
+// 	if err := command(); err != nil {
+// 		if sdErr, ok := err.(sdm.SDMError); ok {
+// 			switch sdErr.Code {
+// 			case sdm.Unauthorized:
+// 				notify.Notify("SDM CLI", "Authenticating... 🔐", "", "")
+// 				if password, err := p.retrievePassword(); err != nil {
+// 					notify.Notify("SDM CLI", "Authentication error 🔐", err.Error(), "")
+// 					return err
+// 				} else {
+// 					log.Debug().Msg("Logging in...")
+// 					if err := p.sdmWrapper.Login(p.account, password); err != nil {
+// 						p.keyring.DeleteSecret(p.account)
+// 						notify.Notify("SDM CLI", "Authentication error 🔐", err.Error(), "")
+// 						return err
+// 					} else {
+// 						log.Debug().Msg("Logged in")
+// 					}
+// 					return command()
+// 				}
+// 			case sdm.InvalidCredentials:
+// 				notify.Notify("SDM CLI", "Authentication error 🔐", "Invalid credentials", "")
+// 				p.keyring.DeleteSecret(p.account)
+// 				return err
+// 			case sdm.ResourceNotFound:
+// 				notify.Notify("SDM CLI", "Resource not found 🔐", err.Error(), "")
+// 				return err
+// 			default:
+// 				notify.Notify("SDM CLI", "Authentication error 🔐", err.Error(), "")
+// 				return err
+// 			}
+// 		}
+// 		notify.Notify("SDM CLI", "Unexpected error❗", err.Error(), "")
+// 		return err
+// 	}
+// 	return nil
+// }
+//
+
 func (p *Program) retryCommand(command func() error) error {
-	if err := command(); err != nil {
-		sdmErr, ok := err.(sdm.SDMError)
-		if ok {
-			switch sdmErr.Code {
-			case sdm.Unauthorized:
-				notify.Notify("SDM CLI", "Authenticating... 🔐", "", "")
-				err := p.sdmWrapper.Login(p.account, p.password)
-				if err != nil {
-					p.keyring.DeleteSecret(p.account)
-					notify.Notify("SDM CLI", "Authentication error 🔐", err.Error(), "")
-					return err
-				}
-				return command()
-			case sdm.InvalidCredentials:
-				notify.Notify("SDM CLI", "Authentication error 🔐", "Invalid credentials", "")
-				p.keyring.DeleteSecret(p.account)
-				return err
-			case sdm.ResourceNotFound:
-				notify.Notify("SDM CLI", "Resource not found 🔐", err.Error(), "")
-				return err
-			default:
-				notify.Notify("SDM CLI", "Authentication error 🔐", err.Error(), "")
-				return err
-			}
-		} else {
-			notify.Notify("SDM CLI", "Unexpected error❗", err.Error(), "")
-			return err
-		}
+	err := command()
+
+	if err == nil {
+		return nil
 	}
-	return nil
+
+	sdErr, ok := err.(sdm.SDMError)
+
+	if !ok {
+		notify.Notify("SDM CLI", "Unexpected error❗", err.Error(), "")
+		return err
+	}
+
+	switch sdErr.Code {
+	case sdm.Unauthorized:
+		return p.handleUnauthorized(command)
+	case sdm.InvalidCredentials:
+		return p.handleInvalidCredentials(err)
+	case sdm.ResourceNotFound:
+		notify.Notify("SDM CLI", "Resource not found 🔐", err.Error(), "")
+		return err
+	default:
+		notify.Notify("SDM CLI", "Authentication error 🔐", err.Error(), "")
+		return err
+	}
+}
+
+func (p *Program) handleUnauthorized(command func() error) error {
+	notify.Notify("SDM CLI", "Authenticating... 🔐", "", "")
+
+	password, err := p.retrievePassword()
+
+	if err != nil {
+		notify.Notify("SDM CLI", "Authentication error 🔐", err.Error(), "")
+		return err
+	}
+
+	log.Debug().Msg("Logging in...")
+
+	if err := p.sdmWrapper.Login(p.account, password); err != nil {
+		p.keyring.DeleteSecret(p.account)
+		notify.Notify("SDM CLI", "Authentication error 🔐", err.Error(), "")
+		return err
+	}
+
+	log.Debug().Msg("Logged in")
+	return command()
+}
+
+func (p *Program) handleInvalidCredentials(err error) error {
+	notify.Notify("SDM CLI", "Authentication error 🔐", "Invalid credentials", "")
+	p.keyring.DeleteSecret(p.account)
+	return err
 }

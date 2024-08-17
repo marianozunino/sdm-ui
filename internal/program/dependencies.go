@@ -3,20 +3,24 @@ package program
 import (
 	"fmt"
 	"os/exec"
+
+	"github.com/rs/zerolog/log"
 )
 
-var dependencies = []string{
-	"sdm", "zenity", "rofi",
+var dependencies = [3]string{
+	"sdm",
+	"zenity",
+	"rofi",
 }
 
 func mustHaveDependencies() {
-	printDebug("Checking dependencies...")
+	log.Debug().Msg("Checking dependencies...")
 	for _, dependency := range dependencies {
-		printDebug(fmt.Sprintf("Checking dependency: %s", dependency))
+		log.Debug().Msg(fmt.Sprintf("Checking dependency: %s", dependency))
 		_, err := exec.LookPath(dependency)
 		if err != nil {
-			panic(err)
+			log.Fatal().Msg(fmt.Sprintf("Dependency not found: %s", dependency))
 		}
 	}
-	printDebug("Dependencies OK")
+	log.Debug().Msg("Dependencies OK")
 }
