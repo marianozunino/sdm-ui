@@ -22,15 +22,24 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/adrg/xdg"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 )
 
-var email string
-var dbPath string
-var verbose bool
+var cfgFile string
+
+type conf struct {
+	Email   string `mapstructure:"email"`
+	DBPath  string `mapstructure:"dbPath"`
+	Verbose bool   `mapstructure:"verbose"`
+}
+
+var confData conf = conf{}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -38,6 +47,10 @@ var rootCmd = &cobra.Command{
 	Short: "SDM UI - Wrapper for SDM CLI",
 	Long: `SDM UI is a custom wrapper around StrongDM (SDM)
 designed to improve the developer experience (DX) on Linux.`,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// You can bind cobra and viper in a few locations, but PersistencePreRunE on the root command works well
+		return initializeConfig(cmd)
+	},
 }
 
 func Execute() {
@@ -48,9 +61,56 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&email, "email", "e", "", "email address")
-	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
-	rootCmd.PersistentFlags().StringVarP(&dbPath, "db", "d", xdg.DataHome, "database path (default: $XDG_DATA_HOME)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", xdg.ConfigHome+"/sdm-ui.yaml", "config file")
+	rootCmd.PersistentFlags().StringVarP(&confData.Email, "email", "e", "", "email address (overrides config file)")
+	rootCmd.PersistentFlags().BoolVarP(&confData.Verbose, "verbose", "v", false, "verbose output (overrides config file)")
+	rootCmd.PersistentFlags().StringVarP(&confData.DBPath, "db", "d", xdg.DataHome, "database path")
+
 	rootCmd.MarkPersistentFlagRequired("email")
-	rootCmd.MarkPersistentFlagRequired("e")
+}
+
+func initializeConfig(cmd *cobra.Command) error {
+	if cfgFile != "" {
+		// Use config file from the flag.
+		viper.SetConfigFile(cfgFile)
+	} else {
+		// Find configFolder directory.
+		configFolder := cfgFile
+
+		// Search config in home directory with name ".sdm-ui" (without extension).
+		viper.AddConfigPath(configFolder)
+		viper.SetConfigType("yaml")
+		viper.SetConfigName("sdm-ui")
+	}
+
+	// Attempt to read the config file, gracefully ignoring errors
+	// caused by a config file not being found. Return an error
+	// if we cannot parse the config file.
+	if err := viper.ReadInConfig(); err != nil {
+		// It's okay if there isn't a config file
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			return err
+		}
+	}
+
+	viper.AutomaticEnv() // read in environment variables that match
+
+	// Bind the current command's flags to viper
+	bindFlags(cmd)
+
+	return nil
+}
+
+// Bind each cobra flag to its associated viper configuration (config file and environment variable)
+func bindFlags(cmd *cobra.Command) {
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		// Determine the naming convention of the flags when represented in the config file
+		configName := f.Name
+
+		// Apply the viper config value to the flag when the flag is not set and viper has a value
+		if !f.Changed && viper.IsSet(configName) {
+			val := viper.Get(configName)
+			cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
+		}
+	})
 }
