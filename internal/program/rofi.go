@@ -49,7 +49,6 @@ func (p *Program) getSelectionFromDmenu(entries []*entry.Entry) (string, error) 
 	ctx := context.Background()
 	s, err := d.Select(ctx)
 	if err != nil {
-		// log.Printf("[rofi] Selection error: %v", err)
 		return "", err
 	}
 

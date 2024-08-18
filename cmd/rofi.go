@@ -33,9 +33,9 @@ var rofiCmd = &cobra.Command{
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		program.NewProgram(
-			program.WithAccount(email),
-			program.WithVerbose(verbose),
-			program.WithDbPath(dbPath),
+			program.WithAccount(confData.Email),
+			program.WithVerbose(confData.Verbose),
+			program.WithDbPath(confData.DBPath),
 		).Rofi()
 
 	},

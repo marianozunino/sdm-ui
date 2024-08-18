@@ -5,3 +5,4 @@ tmp/
 bb
 
 dist/
+*.db
