@@ -1,18 +1,20 @@
 # SDM Wrapper
 
-Why do I need a SDM Wrapper?
+## Why Use the SDM Wrapper?
 
-- SDM is slow as fuck when it comes to list the status/resources (`sdm status`),
-although is possible that that happens because I'm not in the US.
-- SDM has no UI for linux, and combined with the "slow" issue makes the experience not so good.
-- Because I can.
+- **Performance**: The `sdm` command can be slow, especially when listing statuses/resources (`sdm status`). This issue might be exacerbated if you're outside the US.
+- **User Interface**: `sdm` lacks a UI for Linux, which, combined with its performance issues, makes the experience less than ideal.
+- **Personal Challenge**: Because it’s a fun project and a great learning opportunity.
 
-## How to install
+## Installation
+
+To install the SDM Wrapper, run:
 
 ```bash
-go install github.com/marianozunino/sdm-ui
+go install github.com/marianozunino/sdm-ui@latest
 ```
-## How to use
+
+## Usage
 
 ```bash
 Usage:
@@ -32,49 +34,34 @@ Flags:
   -v, --verbose        verbose output
 ```
 
-### How does this wrapper solves the above issues?
+### How Does the Wrapper Address These Issues?
 
-##### Slow status
-Usually the workflow with the sdm cli tool is:
-- `sdm status | grep <something>` to get a reduced list of resources
-    - e.g. `sdm status | grep rds` to only get the rds resources
-- `sdm connect <resource>` to connect to the resource
+#### Slow Status
 
-The wrapper will instead, try to get the resouce list from a cache using [bbolt](https://github.com/etcd-io/bbolt) (overkill? yes. Does it work? fuck yes! and fast too)
+The typical workflow with `sdm` involves:
 
-- But, when does the cache get populated?
-    - Easy, I populate it when I connect to a resource.
+1. Running `sdm status | grep <something>` to filter the list of resources (e.g., `sdm status | grep rds` to find RDS resources).
+2. Using `sdm connect <resource>` to connect to the selected resource.
 
-##### No UI
+The SDM Wrapper improves this by caching the resource list using [bbolt](https://github.com/etcd-io/bbolt). This makes resource retrieval faster and more efficient. The cache is populated automatically when you connect to a resource.
 
-I'm not a UI person, but I'm a lazy one. Thus, I really enjoi using [rofi](https://github.com/DaveDavenport/rofi) as a dmenu.
+#### Lack of UI
 
-So this wrapper will use rofi to present/select the resource.
+While I’m not a UI expert, I appreciate efficiency. The wrapper integrates with [rofi](https://github.com/DaveDavenport/rofi) to provide a user-friendly interface for selecting resources.
 
-|![screenshot](./img/rofi.jpg)|
+| ![rofi screenshot](./img/rofi.jpg) |
 |:--:|
-| *Picture is filled with random data*|
+| *Example of rofi interface* |
 
-Now when it comes to handle the credentials, this wrapper will use [keyring](https://github.com/tmc/keyring) to store/retrieve the credentials.
+Credential management is handled using [keyring](https://github.com/tmc/keyring), and if credentials are missing, the wrapper prompts for them via [zenity](https://github.com/ncruces/zenity).
 
-If the credentials are not found, it will prompt the user to enter them using [zenity](https://github.com/ncruces/zenity).
-
-|![screenshot](./img/zenity.jpg)|
+| ![zenity screenshot](./img/zenity.jpg) |
 |:--:|
-| *Picture is filled with random data*|
+| *Example of zenity prompt* |
 
-
-
-Another utility that I really envy from my coworkers is the fact the `sdm ui` for MacOS will open a browser tab
-if you are connecting to a "web" resource (rabbitmq admin page for example).
-
-No more.
-
-I use [open](https://github.com/skratchdot/open-golang) to open the browser. F*ck you 🍏
-
+Additionally, unlike the MacOS version of `sdm`, which opens a browser tab for web resources, the wrapper uses [open](https://github.com/skratchdot/open-golang) to achieve the same on Linux.
 
 ### Notes
 
-- Did I test this in other environments/OS? Hell no.
-
-
+- **Cross-Platform Testing**: This wrapper has only been tested in the environment where it was developed. If you encounter any issues, contributions or feedback are welcome!
+- **SDM Version**: The wrapper was tested with the sdm version 44.31.0
