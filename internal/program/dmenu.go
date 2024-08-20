@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"git.sr.ht/~jcmuller/go-rofi/dmenu"
-	"git.sr.ht/~jcmuller/go-rofi/entry"
+	"git.sr.ht/~marianozunino/go-rofi/dmenu"
+	"git.sr.ht/~marianozunino/go-rofi/entry"
+
 	"github.com/marianozunino/sdm-ui/internal/storage"
 	"github.com/martinlindhe/notify"
 	"github.com/rs/zerolog/log"
@@ -15,7 +16,15 @@ import (
 	"github.com/zyedidia/clipper"
 )
 
-func (p *Program) Rofi() error {
+type DMenuCommand string
+
+const (
+	Rofi DMenuCommand = "rofi"
+	Wofi              = "wofi"
+)
+
+func (p *Program) DMenu() error {
+
 	bytesOut := new(bytes.Buffer)
 
 	if err := p.List(bytesOut); err != nil {
@@ -44,6 +53,7 @@ func (p *Program) getSelectionFromDmenu(entries []*entry.Entry) (string, error) 
 	d := dmenu.New(
 		dmenu.WithPrompt("Select Data Source"),
 		dmenu.WithEntries(entries...),
+		dmenu.WithExecPath(string(p.dmenuCommand)),
 	)
 
 	ctx := context.Background()

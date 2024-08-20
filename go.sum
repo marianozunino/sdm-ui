@@ -1,5 +1,5 @@
-git.sr.ht/~jcmuller/go-rofi v0.2.0 h1:tVJHqll6nTjshJ8CwtFQyZv+bqk9Wq1s0obJmSfDRqc=
-git.sr.ht/~jcmuller/go-rofi v0.2.0/go.mod h1:nsHQ9DuQzpVqtjXbNL8TY7p4cF1+L1XEZGAg4yhf+iE=
+git.sr.ht/~marianozunino/go-rofi v0.3.0 h1:pO1kj3vC5LGPT6E+3wtsWbo4k1M44WiC2LmEsA3qpk4=
+git.sr.ht/~marianozunino/go-rofi v0.3.0/go.mod h1:UaK+mVP1gJDIzVdRSvoKWEjSCLh9dUJtFTItZNKinKU=
 github.com/adrg/xdg v0.5.0 h1:dDaZvhMXatArP1NPHhnfaQUqWBLBsmx1h1HXQdMoFCY=
 github.com/adrg/xdg v0.5.0/go.mod h1:dDdY4M4DF9Rjy4kHPeNL+ilVF+p2lK8IdM9/rTSGcI4=
 github.com/akavel/rsrc v0.10.2 h1:Zxm8V5eI1hW4gGaYsJQUhxpjkENuG91ki8B4zCrvEsw=

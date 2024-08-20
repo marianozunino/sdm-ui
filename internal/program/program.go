@@ -14,43 +14,49 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type commandType string
-
 type Program struct {
 	account string
 
-	db         *storage.Storage
-	dbPath     string
-	keyring    libsecret.Keyring
-	sdmWrapper sdm.SDMClient
+	db           *storage.Storage
+	dbPath       string
+	keyring      libsecret.Keyring
+	sdmWrapper   sdm.SDMClient
+	dmenuCommand DMenuCommand
 }
 
-type Option func(*Program)
+type ProgramOption func(*Program)
 
-func WithAccount(account string) Option {
+func WithAccount(account string) ProgramOption {
 	return func(p *Program) {
 		log.Debug().Msgf("Using account: %s", account)
 		p.account = account
 	}
 }
 
-func WithVerbose(verbose bool) Option {
+func WithVerbose(verbose bool) ProgramOption {
 	logger.ConfigureLogger(verbose)
 	return func(p *Program) {}
 }
 
-func WithDbPath(dbPath string) Option {
+func WithDbPath(dbPath string) ProgramOption {
 	return func(p *Program) {
 		p.dbPath = dbPath
 	}
 }
 
-func NewProgram(opts ...Option) *Program {
+func WithCommand(command DMenuCommand) ProgramOption {
+	return func(p *Program) {
+		p.dmenuCommand = command
+	}
+}
+
+func NewProgram(opts ...ProgramOption) *Program {
 	mustHaveDependencies()
 
 	p := &Program{
-		sdmWrapper: sdm.SDMClient{Exe: "sdm"},
-		dbPath:     xdg.DataHome,
+		sdmWrapper:   sdm.SDMClient{Exe: "sdm"},
+		dbPath:       xdg.DataHome,
+		dmenuCommand: Rofi,
 	}
 
 	for _, opt := range opts {

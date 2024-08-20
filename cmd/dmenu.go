@@ -26,22 +26,38 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// rofiCmd represents the rofi command
-var rofiCmd = &cobra.Command{
-	Use:   "rofi",
+var useWofi bool
+var useRofi bool
+
+// dmenuCmd represents the dmenu command
+var dmenuCmd = &cobra.Command{
+	Use:   "dmenu",
 	Short: "Opens dmenu with available data sources",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
+		var commandOption program.ProgramOption
+
+		if useWofi {
+			commandOption = program.WithCommand(program.Wofi)
+		} else {
+			commandOption = program.WithCommand(program.Rofi)
+		}
+
 		program.NewProgram(
 			program.WithAccount(confData.Email),
 			program.WithVerbose(confData.Verbose),
 			program.WithDbPath(confData.DBPath),
-		).Rofi()
+			commandOption,
+		).DMenu()
 
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(rofiCmd)
+	rootCmd.AddCommand(dmenuCmd)
+	dmenuCmd.Flags().BoolVarP(&useWofi, "wofi", "w", false, "use wofi as dmenu")
+	dmenuCmd.Flags().BoolVarP(&useRofi, "rofi", "r", true, "use rofi as dmenu")
+	// exclusive flags
+	dmenuCmd.MarkFlagsMutuallyExclusive("wofi", "rofi")
 
 }

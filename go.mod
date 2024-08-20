@@ -3,7 +3,7 @@ module github.com/marianozunino/sdm-ui
 go 1.21.6
 
 require (
-	git.sr.ht/~jcmuller/go-rofi v0.2.0
+	git.sr.ht/~marianozunino/go-rofi v0.3.0
 	github.com/adrg/xdg v0.5.0
 	github.com/rs/zerolog v1.33.0
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
