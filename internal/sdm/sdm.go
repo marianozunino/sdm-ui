@@ -90,7 +90,7 @@ func (s *SDMClient) Login(email, password string) error {
 
 // Status writes the status of the SDM client to the provided writer.
 func (s *SDMClient) Status(w io.Writer) error {
-	output, err := s.RunCommand("status")
+	output, err := s.RunCommand("status", "-j")
 	if _, writeErr := w.Write([]byte(output)); writeErr != nil {
 		return writeErr
 	}

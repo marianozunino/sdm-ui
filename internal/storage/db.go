@@ -134,3 +134,12 @@ func (s *Storage) GetDatasource(name string) (DataSource, error) {
 
 	return datasource, err
 }
+
+func (s *Storage) Wipe() error {
+	return s.Update(func(tx *bolt.Tx) error {
+		if err := tx.DeleteBucket(buildBucketKey(s.account)); err != nil {
+			return fmt.Errorf("failed to delete bucket for account %s: %w", s.account, err)
+		}
+		return nil
+	})
+}

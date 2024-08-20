@@ -116,45 +116,6 @@ func ellipsize(s string, maxLen int) string {
 	return s[:maxLen] + "..."
 }
 
-// func (p *Program) retryCommand(command func() error) error {
-// 	if err := command(); err != nil {
-// 		if sdErr, ok := err.(sdm.SDMError); ok {
-// 			switch sdErr.Code {
-// 			case sdm.Unauthorized:
-// 				notify.Notify("SDM CLI", "Authenticating... 🔐", "", "")
-// 				if password, err := p.retrievePassword(); err != nil {
-// 					notify.Notify("SDM CLI", "Authentication error 🔐", err.Error(), "")
-// 					return err
-// 				} else {
-// 					log.Debug().Msg("Logging in...")
-// 					if err := p.sdmWrapper.Login(p.account, password); err != nil {
-// 						p.keyring.DeleteSecret(p.account)
-// 						notify.Notify("SDM CLI", "Authentication error 🔐", err.Error(), "")
-// 						return err
-// 					} else {
-// 						log.Debug().Msg("Logged in")
-// 					}
-// 					return command()
-// 				}
-// 			case sdm.InvalidCredentials:
-// 				notify.Notify("SDM CLI", "Authentication error 🔐", "Invalid credentials", "")
-// 				p.keyring.DeleteSecret(p.account)
-// 				return err
-// 			case sdm.ResourceNotFound:
-// 				notify.Notify("SDM CLI", "Resource not found 🔐", err.Error(), "")
-// 				return err
-// 			default:
-// 				notify.Notify("SDM CLI", "Authentication error 🔐", err.Error(), "")
-// 				return err
-// 			}
-// 		}
-// 		notify.Notify("SDM CLI", "Unexpected error❗", err.Error(), "")
-// 		return err
-// 	}
-// 	return nil
-// }
-//
-
 func (p *Program) retryCommand(command func() error) error {
 	err := command()
 

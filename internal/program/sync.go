@@ -22,8 +22,5 @@ func (p *Program) Sync() error {
 	dataSources := parseDataSources(statusesBuffer.String())
 	p.db.StoreServers(dataSources)
 
-	servers := parseServers(statusesBuffer.String())
-	p.db.StoreServers(servers)
-
 	return nil
 }

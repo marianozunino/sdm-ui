@@ -1,95 +1,89 @@
 package program
 
 import (
+	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/marianozunino/sdm-ui/internal/storage"
+	"github.com/rs/zerolog/log"
 )
 
-func parseDataSources(output string) []storage.DataSource {
-	lines := extractSection(output, "DATASOURCE", "SERVER")
-	var dataSources []storage.DataSource
-	for _, line := range lines {
-		fields := strings.Fields(line)
-		if len(fields) >= 5 {
-			statusIndex := -1
-			for i, field := range fields {
-				if field == "connected" {
-					statusIndex = i
-					break
-				}
-			}
+// ResourceType represents the type of resource.
+type ResourceType string
 
-			if statusIndex != -1 {
-				dataSource := storage.DataSource{
-					Name:    fields[0],
-					Status:  strings.Join(fields[1:statusIndex+1], " "),
-					Address: fields[statusIndex+1],
-					Type:    fields[statusIndex+2],
-					Tags:    strings.Join(fields[statusIndex+3:], " "),
-				}
-				if dataSource.Type == "amazones" {
-					dataSource.Address = fmt.Sprintf("http://%s/_plugin/kibana/app/kibana", dataSource.Address)
-				}
-				dataSources = append(dataSources, dataSource)
-			}
-		}
+// Resource type constants.
+const (
+	TypeRedis        ResourceType = "redis"
+	TypePostgres     ResourceType = "postgres"
+	TypeAmazonEKS    ResourceType = "amazoneks"
+	TypeAmazonES     ResourceType = "amazones"
+	TypeAthena       ResourceType = "athena"
+	TypeHTTPNoAuth   ResourceType = "httpNoAuth"
+	TypeAmazonMQAMQP ResourceType = "amazonmq-amqp-091"
+	TypeRawTCP       ResourceType = "rawtcp"
+)
+
+// Resource represents the details of a resource.
+type Resource struct {
+	Address          string `json:"address,omitempty"`
+	Connected        bool   `json:"connected"`
+	ConnectionStatus string `json:"connection_status"`
+	Hostname         string `json:"hostname"`
+	ID               string `json:"id"`
+	Message          string `json:"message"`
+	Name             string `json:"name"`
+	Tags             string `json:"tags"`
+	Type             string `json:"type"`
+	WebURL           string `json:"web_url,omitempty"`
+}
+
+// parseDataSources converts JSON-encoded resource data into a list of DataSource objects.
+func parseDataSources(rawResources string) []storage.DataSource {
+	var resources []Resource
+	if err := json.Unmarshal([]byte(rawResources), &resources); err != nil {
+		log.Debug().Msgf("Failed to parse resources: %s", err)
+		return nil
 	}
+
+	var dataSources []storage.DataSource
+	for _, resource := range resources {
+		if !isValidType(resource.Type) {
+			log.Debug().Msgf("Skipping invalid resource type: %s", resource.Type)
+			continue
+		}
+
+		dataSource := storage.DataSource{
+			Name:    resource.Name,
+			Status:  resource.ConnectionStatus,
+			Type:    resource.Type,
+			Tags:    resource.Tags,
+			Address: formatAddress(resource.Type, resource.Message),
+		}
+		dataSources = append(dataSources, dataSource)
+	}
+
 	return dataSources
 }
 
-func parseServers(output string) []storage.DataSource {
-	lines := extractSection(output, "SERVER", "WEBSITE")
-	var servers []storage.DataSource
-	for _, line := range lines {
-		fields := strings.Fields(line)
-		if len(fields) >= 5 {
-
-			statusIndex := -1
-			for i, field := range fields {
-				if field == "connected" {
-					statusIndex = i
-					break
-				}
-			}
-			if statusIndex != -1 {
-				server := storage.DataSource{
-					Name:    fields[0],
-					Status:  strings.Join(fields[1:statusIndex+1], " "),
-					Address: fmt.Sprintf("https://%s", fields[statusIndex+2]),
-					Type:    fields[statusIndex+3],
-					Tags:    strings.Join(fields[statusIndex+3:], " "),
-				}
-				servers = append(servers, server)
-			}
-		}
+// isValidType checks if the resource type is one of the recognized types.
+func isValidType(resourceType string) bool {
+	switch ResourceType(resourceType) {
+	case TypeRedis, TypePostgres, TypeAmazonEKS, TypeAmazonES, TypeAthena, TypeAmazonMQAMQP, TypeRawTCP:
+		return true
+	default:
+		return false
 	}
-	return servers
 }
 
-func extractSection(output, startMarker, endMarker string) []string {
-	var lines []string
-	start := strings.Index(output, startMarker)
-	end := strings.Index(output, endMarker)
-	if start == -1 {
-		return lines
+// formatAddress formats the address for certain resource types.
+func formatAddress(resourceType string, message string) string {
+	switch ResourceType(resourceType) {
+	case TypeAmazonES:
+		return fmt.Sprintf("http://%s/_plugin/kibana/app/kibana", message)
+	case TypeRawTCP:
+		return fmt.Sprintf("https://%s", message)
+	default:
+		return message
 	}
-	if end == -1 {
-		end = len(output)
-	}
-	section := output[start:end]
-	lines = strings.Split(section, "\n")
-	// Remove the header line
-	if len(lines) > 0 {
-		lines = lines[1:]
-	}
-	// Remove empty lines
-	var cleanedLines []string
-	for _, line := range lines {
-		if line != "" {
-			cleanedLines = append(cleanedLines, line)
-		}
-	}
-	return cleanedLines
 }
+
