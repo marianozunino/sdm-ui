@@ -22,6 +22,19 @@ builds:
       - linux
       - darwin
 
+    ldflags: "-s -w -X github.com/marianozunino/sdm-ui/cmd.Version={{.Version}}"
+
+release:
+  github:
+    owner: marianozunino
+    name: sdm-ui
+  name_template: "{{.ProjectName}}-v{{.Version}} {{.Env.USER}}"
+
+  # You can disable this pipe in order to not upload any artifacts to
+  # GitHub.
+  # Defaults to false.
+  disable: false
+
 archives:
   - format: tar.gz
     # this name template makes the OS and Arch compatible with the results of `uname`.

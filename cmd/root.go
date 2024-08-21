@@ -45,8 +45,14 @@ var confData conf = conf{}
 var rootCmd = &cobra.Command{
 	Use:   "sdm-ui",
 	Short: "SDM UI - Wrapper for SDM CLI",
-	Long: `SDM UI is a custom wrapper around StrongDM (SDM)
-designed to improve the developer experience (DX) on Linux.`,
+	Long: `
+ ___ ___  __  __   _   _ ___
+/ __|   \|  \/  | | | | |_ _|
+\__ \ |) | |\/| | | |_| || |
+|___/___/|_|  |_|  \___/|___| ` + VersionFromBuild() + `
+
+SDM UI is a custom wrapper around StrongDM (SDM) designed to improve the developer experience (DX) on Linux.`,
+
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// You can bind cobra and viper in a few locations, but PersistencePreRunE on the root command works well
 		return initializeConfig(cmd)

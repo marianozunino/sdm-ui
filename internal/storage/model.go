@@ -12,6 +12,7 @@ type DataSource struct {
 	Address string
 	Type    string
 	Tags    string
+	WebURL  string
 }
 
 // Encode serializes the DataSource into a byte slice.
@@ -37,4 +38,3 @@ func (ds *DataSource) Decode(data []byte) error {
 func (ds DataSource) Key() []byte {
 	return []byte(ds.Name)
 }
-

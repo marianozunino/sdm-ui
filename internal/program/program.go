@@ -96,12 +96,17 @@ func (p *Program) validateAccount() error {
 
 func printDataSources(dataSources []storage.DataSource, w io.Writer) {
 	const format = "%v\t%v\t%v\n"
-	tw := tabwriter.NewWriter(w, 0, 8, 1, '\t', 0)
+	tw := tabwriter.NewWriter(w, 0, 8, 2, '\t', 0)
 
 	for _, ds := range dataSources {
-		status := "🔒"
+		status := "🔌"
+
 		if ds.Status == "connected" {
-			status = "✅"
+			status = "⚡"
+		}
+
+		if ds.WebURL != "" {
+			status = "🌐"
 		}
 
 		fmt.Fprintf(tw, format, ds.Name, ellipsize(ds.Address, 20), status)

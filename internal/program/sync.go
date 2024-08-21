@@ -2,7 +2,6 @@ package program
 
 import (
 	"bytes"
-	"fmt"
 
 	"github.com/rs/zerolog/log"
 )
@@ -15,7 +14,7 @@ func (p *Program) Sync() error {
 		statusesBuffer.Reset()
 		return p.sdmWrapper.Status(statusesBuffer)
 	}); err != nil {
-		fmt.Println("[sync] Failed to sync with SDM")
+		log.Debug().Msg("Failed to sync with SDM")
 		return err
 	}
 

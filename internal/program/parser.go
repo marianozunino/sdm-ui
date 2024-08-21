@@ -2,7 +2,6 @@ package program
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/marianozunino/sdm-ui/internal/storage"
 	"github.com/rs/zerolog/log"
@@ -47,43 +46,21 @@ func parseDataSources(rawResources string) []storage.DataSource {
 
 	var dataSources []storage.DataSource
 	for _, resource := range resources {
-		if !isValidType(resource.Type) {
-			log.Debug().Msgf("Skipping invalid resource type: %s", resource.Type)
-			continue
-		}
-
 		dataSource := storage.DataSource{
 			Name:    resource.Name,
 			Status:  resource.ConnectionStatus,
 			Type:    resource.Type,
 			Tags:    resource.Tags,
-			Address: formatAddress(resource.Type, resource.Message),
+			Address: resource.Address,
+			WebURL:  resource.WebURL,
 		}
+
+		if resource.Address == "" {
+			dataSource.Address = resource.Message
+		}
+
 		dataSources = append(dataSources, dataSource)
 	}
 
 	return dataSources
 }
-
-// isValidType checks if the resource type is one of the recognized types.
-func isValidType(resourceType string) bool {
-	switch ResourceType(resourceType) {
-	case TypeRedis, TypePostgres, TypeAmazonEKS, TypeAmazonES, TypeAthena, TypeAmazonMQAMQP, TypeRawTCP:
-		return true
-	default:
-		return false
-	}
-}
-
-// formatAddress formats the address for certain resource types.
-func formatAddress(resourceType string, message string) string {
-	switch ResourceType(resourceType) {
-	case TypeAmazonES:
-		return fmt.Sprintf("http://%s/_plugin/kibana/app/kibana", message)
-	case TypeRawTCP:
-		return fmt.Sprintf("https://%s", message)
-	default:
-		return message
-	}
-}
-
