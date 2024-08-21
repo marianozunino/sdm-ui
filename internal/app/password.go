@@ -1,4 +1,4 @@
-package program
+package app
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func (p *Program) retrievePassword() (string, error) {
+func (p *App) retrievePassword() (string, error) {
 	log.Debug().Msg("Retrieving password...")
 	password, err := p.keyring.GetSecret(p.account)
 	if err != nil {
@@ -31,7 +31,7 @@ func (p *Program) retrievePassword() (string, error) {
 	return password, nil
 }
 
-func (p *Program) askForPassword() (string, error) {
+func (p *App) askForPassword() (string, error) {
 	log.Debug().Msg("Prompting for password...")
 	_, pwd, err := zenity.Password(zenity.Title("Type your SDM password"))
 	return pwd, err

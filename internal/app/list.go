@@ -1,4 +1,4 @@
-package program
+package app
 
 import (
 	"io"
@@ -10,7 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func (p *Program) List(w io.Writer) error {
+func (p *App) List(w io.Writer) error {
 	dataSources, err := p.db.RetrieveDatasources()
 
 	if err != nil {
@@ -40,7 +40,7 @@ func (p *Program) List(w io.Writer) error {
 	return nil
 }
 
-func (p *Program) applyBlacklist(dataSources []storage.DataSource) []storage.DataSource {
+func (p *App) applyBlacklist(dataSources []storage.DataSource) []storage.DataSource {
 	var filteredDataSources []storage.DataSource
 
 	if len(p.blacklistPatterns) == 0 {

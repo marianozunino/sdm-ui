@@ -1,4 +1,4 @@
-package program
+package app
 
 import (
 	"bytes"
@@ -27,7 +27,7 @@ func (d DMenuCommand) String() string {
 	return string(d)
 }
 
-func (p *Program) DMenu() error {
+func (p *App) DMenu() error {
 
 	bytesOut := new(bytes.Buffer)
 
@@ -45,7 +45,7 @@ func (p *Program) DMenu() error {
 	return p.handleSelectedEntry(selectedEntry)
 }
 
-func (p *Program) createEntriesFromBuffer(buf *bytes.Buffer) []*entry.Entry {
+func (p *App) createEntriesFromBuffer(buf *bytes.Buffer) []*entry.Entry {
 	var entries []*entry.Entry
 	for _, line := range bytes.Split(buf.Bytes(), []byte("\n")) {
 		entries = append(entries, entry.New(string(line)))
@@ -53,7 +53,7 @@ func (p *Program) createEntriesFromBuffer(buf *bytes.Buffer) []*entry.Entry {
 	return entries
 }
 
-func (p *Program) getSelectionFromDmenu(entries []*entry.Entry) (string, error) {
+func (p *App) getSelectionFromDmenu(entries []*entry.Entry) (string, error) {
 	d := dmenu.New(
 		dmenu.WithPrompt("Select Data Source"),
 		dmenu.WithEntries(entries...),
@@ -70,7 +70,7 @@ func (p *Program) getSelectionFromDmenu(entries []*entry.Entry) (string, error) 
 	return s, nil
 }
 
-func (p *Program) handleSelectedEntry(selectedEntry string) error {
+func (p *App) handleSelectedEntry(selectedEntry string) error {
 	fields := strings.Fields(selectedEntry)
 
 	if len(fields) < 2 {
@@ -103,7 +103,7 @@ func (p *Program) handleSelectedEntry(selectedEntry string) error {
 	return p.Sync()
 }
 
-func (p *Program) notifyDataSourceConnected(ds storage.DataSource) {
+func (p *App) notifyDataSourceConnected(ds storage.DataSource) {
 	title := "Data Source Connected 🔌"
 	message := fmt.Sprintf("%s\n📋 <b>%s</b>", ds.Name, ds.Address)
 

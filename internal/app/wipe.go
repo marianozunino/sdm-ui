@@ -1,10 +1,10 @@
-package program
+package app
 
 import (
 	"github.com/rs/zerolog/log"
 )
 
-func (p *Program) WipeCache() error {
+func (p *App) WipeCache() error {
 	log.Debug().Msg("Wiping cache...")
 
 	err := p.db.Wipe()

@@ -1,4 +1,4 @@
-package program
+package app
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type Program struct {
+type App struct {
 	account string
 
 	db                *storage.Storage
@@ -25,41 +25,41 @@ type Program struct {
 	blacklistPatterns []string
 }
 
-type ProgramOption func(*Program)
+type AppOption func(*App)
 
-func WithAccount(account string) ProgramOption {
-	return func(p *Program) {
+func WithAccount(account string) AppOption {
+	return func(p *App) {
 		log.Debug().Msgf("Using account: %s", account)
 		p.account = account
 	}
 }
 
-func WithVerbose(verbose bool) ProgramOption {
+func WithVerbose(verbose bool) AppOption {
 	logger.ConfigureLogger(verbose)
-	return func(p *Program) {}
+	return func(p *App) {}
 }
 
-func WithDbPath(dbPath string) ProgramOption {
-	return func(p *Program) {
+func WithDbPath(dbPath string) AppOption {
+	return func(p *App) {
 		p.dbPath = dbPath
 	}
 }
 
-func WithBlacklist(patterns []string) ProgramOption {
-	return func(p *Program) {
+func WithBlacklist(patterns []string) AppOption {
+	return func(p *App) {
 		p.blacklistPatterns = patterns
 	}
 }
 
-func WithCommand(command DMenuCommand) ProgramOption {
-	return func(p *Program) {
+func WithCommand(command DMenuCommand) AppOption {
+	return func(p *App) {
 		p.dmenuCommand = command
 	}
 }
 
-func NewProgram(opts ...ProgramOption) *Program {
+func Newapp(opts ...AppOption) *App {
 
-	p := &Program{
+	p := &App{
 		sdmWrapper:        sdm.SDMClient{Exe: "sdm"},
 		dbPath:            xdg.DataHome,
 		dmenuCommand:      Rofi,
@@ -83,7 +83,7 @@ func NewProgram(opts ...ProgramOption) *Program {
 	return p
 }
 
-func (p *Program) validateAccount() error {
+func (p *App) validateAccount() error {
 	status, err := p.sdmWrapper.Ready()
 	if err != nil {
 		return err
@@ -130,7 +130,7 @@ func ellipsize(s string, maxLen int) string {
 	return s[:maxLen] + "..."
 }
 
-func (p *Program) retryCommand(command func() error) error {
+func (p *App) retryCommand(command func() error) error {
 	err := command()
 
 	if err == nil {
@@ -158,7 +158,7 @@ func (p *Program) retryCommand(command func() error) error {
 	}
 }
 
-func (p *Program) handleUnauthorized(command func() error) error {
+func (p *App) handleUnauthorized(command func() error) error {
 	notify.Notify("SDM CLI", "Authenticating... 🔐", "", "")
 
 	password, err := p.retrievePassword()
@@ -180,7 +180,7 @@ func (p *Program) handleUnauthorized(command func() error) error {
 	return command()
 }
 
-func (p *Program) handleInvalidCredentials(err error) error {
+func (p *App) handleInvalidCredentials(err error) error {
 	notify.Notify("SDM CLI", "Authentication error 🔐", "Invalid credentials", "")
 	p.keyring.DeleteSecret(p.account)
 	return err

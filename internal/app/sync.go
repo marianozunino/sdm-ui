@@ -1,4 +1,4 @@
-package program
+package app
 
 import (
 	"bytes"
@@ -6,7 +6,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func (p *Program) Sync() error {
+func (p *App) Sync() error {
 	log.Debug().Msg("Syncing...")
 	statusesBuffer := new(bytes.Buffer)
 

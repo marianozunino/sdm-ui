@@ -22,7 +22,7 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"github.com/marianozunino/sdm-ui/internal/program"
+	"github.com/marianozunino/sdm-ui/internal/app"
 	"github.com/spf13/cobra"
 )
 
@@ -32,11 +32,11 @@ var syncCmd = &cobra.Command{
 	Short: "Syncronizes the internal cache",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		program.NewProgram(
-			program.WithAccount(confData.Email),
-			program.WithVerbose(confData.Verbose),
-			program.WithDbPath(confData.DBPath),
-			program.WithBlacklist(confData.BalcklistPatterns),
+		app.Newapp(
+			app.WithAccount(confData.Email),
+			app.WithVerbose(confData.Verbose),
+			app.WithDbPath(confData.DBPath),
+			app.WithBlacklist(confData.BalcklistPatterns),
 		).Sync()
 	},
 }
