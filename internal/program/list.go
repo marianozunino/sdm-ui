@@ -3,6 +3,7 @@ package program
 import (
 	"io"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/marianozunino/sdm-ui/internal/storage"
@@ -16,8 +17,6 @@ func (p *Program) List(w io.Writer) error {
 		return err
 	}
 
-	dataSources = p.applyBlacklist(dataSources)
-
 	if len(dataSources) == 0 {
 		log.Info().Msg("No data sources found, syncing...")
 		if err := p.Sync(); err != nil {
@@ -29,6 +28,13 @@ func (p *Program) List(w io.Writer) error {
 			return err
 		}
 	}
+
+	dataSources = p.applyBlacklist(dataSources)
+
+	// sort by LRU
+	slices.SortFunc(dataSources, func(a, b storage.DataSource) int {
+		return int(b.LRU - a.LRU)
+	})
 
 	printDataSources(dataSources, w)
 	return nil

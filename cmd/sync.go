@@ -36,6 +36,7 @@ var syncCmd = &cobra.Command{
 			program.WithAccount(confData.Email),
 			program.WithVerbose(confData.Verbose),
 			program.WithDbPath(confData.DBPath),
+			program.WithBlacklist(confData.BalcklistPatterns),
 		).Sync()
 	},
 }

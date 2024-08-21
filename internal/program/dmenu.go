@@ -93,6 +93,7 @@ func (p *Program) handleSelectedEntry(selectedEntry string) error {
 	}
 
 	if err := p.retryCommand(func() error {
+		p.db.UpdateLastUsed(ds)
 		return p.sdmWrapper.Connect(ds.Name)
 	}); err != nil {
 		return err

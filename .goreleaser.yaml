@@ -28,7 +28,7 @@ release:
   github:
     owner: marianozunino
     name: sdm-ui
-  name_template: "{{.ProjectName}}-v{{.Version}} {{.Env.USER}}"
+  name_template: "{{.ProjectName}} v{{.Version}}"
 
   # You can disable this pipe in order to not upload any artifacts to
   # GitHub.

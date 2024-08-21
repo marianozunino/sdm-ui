@@ -13,6 +13,7 @@ type DataSource struct {
 	Type    string
 	Tags    string
 	WebURL  string
+	LRU     int64 // Unix timestamp to sort on
 }
 
 // Encode serializes the DataSource into a byte slice.

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	bolt "go.etcd.io/bbolt"
@@ -12,7 +13,7 @@ import (
 
 const (
 	datasourceBucketPrefix = "datasource"
-	currentDBVersion       = 1 // increment this whenever the database schema changes
+	currentDBVersion       = 2 // increment this whenever the database schema changes
 	retentionPeriod        = 2
 )
 
@@ -58,6 +59,31 @@ func buildBucketKey(account string, version int) []byte {
 	return []byte(fmt.Sprintf("%s:%s:v%d", account, datasourceBucketPrefix, version))
 }
 
+// // StoreServers stores the provided datasources for the specified account.
+// func (s *Storage) StoreServers(datasources []DataSource) error {
+// 	bucketKey := buildBucketKey(s.account, currentDBVersion)
+// 	return s.Update(func(tx *bolt.Tx) error {
+// 		log.Debug().Msgf("Storing %d datasources", len(datasources))
+// 		bucket := tx.Bucket(bucketKey)
+// 		if bucket == nil {
+// 			return fmt.Errorf("bucket for account %s not found", s.account)
+// 		}
+// 		for _, ds := range datasources {
+// 			// Encode the DataSource and handle any errors
+// 			encodedData, err := ds.Encode()
+// 			if err != nil {
+// 				return fmt.Errorf("failed to encode datasource %s: %w", ds.Name, err)
+// 			}
+// 			// Store the encoded DataSource in the bucket
+// 			if err := bucket.Put(ds.Key(), encodedData); err != nil {
+// 				return fmt.Errorf("failed to store datasource %s: %w", ds.Name, err)
+// 			}
+// 		}
+// 		log.Debug().Msgf("Successfully stored %d datasources", len(datasources))
+// 		return nil
+// 	})
+// }
+
 // StoreServers stores the provided datasources for the specified account.
 func (s *Storage) StoreServers(datasources []DataSource) error {
 	bucketKey := buildBucketKey(s.account, currentDBVersion)
@@ -68,7 +94,18 @@ func (s *Storage) StoreServers(datasources []DataSource) error {
 			return fmt.Errorf("bucket for account %s not found", s.account)
 		}
 		for _, ds := range datasources {
-			// Encode the DataSource and handle any errors
+			// Retrieve the existing DataSource from the database
+			existingData := bucket.Get(ds.Key())
+			if existingData != nil {
+				var existingDS DataSource
+				if err := existingDS.Decode(existingData); err != nil {
+					return fmt.Errorf("failed to decode existing datasource %s: %w", ds.Name, err)
+				}
+				// Update the LRU value of the existing DataSource
+				ds.LRU = existingDS.LRU
+			}
+
+			// Encode the updated DataSource and handle any errors
 			encodedData, err := ds.Encode()
 			if err != nil {
 				return fmt.Errorf("failed to encode datasource %s: %w", ds.Name, err)
@@ -125,6 +162,30 @@ func (s *Storage) GetDatasource(name string) (DataSource, error) {
 		return nil
 	})
 	return datasource, err
+}
+
+func (s *Storage) UpdateLastUsed(ds DataSource) error {
+	ds.LRU = time.Now().Unix()
+	bucketKey := buildBucketKey(s.account, currentDBVersion)
+	return s.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(bucketKey)
+		if bucket == nil {
+			return fmt.Errorf("bucket for account %s not found", s.account)
+		}
+
+		// Encode the DataSource and handle any errors
+		encodedData, err := ds.Encode()
+		if err != nil {
+			return fmt.Errorf("failed to encode datasource %s: %w", ds.Name, err)
+		}
+
+		// Store the encoded DataSource in the bucket
+		if err := bucket.Put(ds.Key(), encodedData); err != nil {
+			return fmt.Errorf("failed to store datasource %s: %w", ds.Name, err)
+		}
+
+		return nil
+	})
 }
 
 // removeOldBuckets removes old buckets that are older than the specified retention period.
