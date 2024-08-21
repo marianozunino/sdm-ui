@@ -11,31 +11,10 @@ import (
 )
 
 func (p *App) List(w io.Writer) error {
-	dataSources, err := p.db.RetrieveDatasources()
-
+	dataSources, err := p.GetSortedDataSources()
 	if err != nil {
 		return err
 	}
-
-	if len(dataSources) == 0 {
-		log.Info().Msg("No data sources found, syncing...")
-		if err := p.Sync(); err != nil {
-			return err
-		}
-
-		dataSources, err = p.db.RetrieveDatasources()
-		if err != nil {
-			return err
-		}
-	}
-
-	dataSources = p.applyBlacklist(dataSources)
-
-	// sort by LRU
-	slices.SortFunc(dataSources, func(a, b storage.DataSource) int {
-		return int(b.LRU - a.LRU)
-	})
-
 	printDataSources(dataSources, w)
 	return nil
 }
@@ -62,4 +41,33 @@ func (p *App) applyBlacklist(dataSources []storage.DataSource) []storage.DataSou
 		}
 	}
 	return filteredDataSources
+}
+
+func (p *App) GetSortedDataSources() ([]storage.DataSource, error) {
+	dataSources, err := p.db.RetrieveDatasources()
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(dataSources) == 0 {
+		log.Info().Msg("No data sources found, syncing...")
+		if err := p.Sync(); err != nil {
+			return nil, err
+		}
+
+		dataSources, err = p.db.RetrieveDatasources()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	dataSources = p.applyBlacklist(dataSources)
+
+	// sort by LRU
+	slices.SortFunc(dataSources, func(a, b storage.DataSource) int {
+		return int(b.LRU - a.LRU)
+	})
+
+	return dataSources, nil
 }
