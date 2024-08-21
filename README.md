@@ -23,6 +23,7 @@ Usage:
 Available Commands:
   completion  Generate the autocompletion script for the specified shell
   dmenu       Opens dmenu with available data sources
+  fzf         Opens fzf with available data sources
   help        Help about any command
   list        List SDM resources
   sync        Syncronizes the internal cache
@@ -71,7 +72,7 @@ The SDM Wrapper improves this by caching the resource list using [bbolt](https:/
 
 #### Lack of UI
 
-While I'm not a UI expert, I appreciate efficiency. The wrapper integrates with [rofi](https://github.com/DaveDavenport/rofi) or [wofi](https://sr.ht/~scoopta/wofi/) to provide a user-friendly interface for selecting resources.
+While I'm not a UI expert, I appreciate efficiency. The wrapper integrates with [rofi](https://github.com/DaveDavenport/rofi), [wofi](https://sr.ht/~scoopta/wofi/), or [fzf](https://github.com/junegunn/fzf) to provide a user-friendly interface for selecting resources.
 
 Credential management is handled using [keyring](https://github.com/tmc/keyring), and if credentials are missing, the wrapper prompts for them via [zenity](https://github.com/ncruces/zenity).
 

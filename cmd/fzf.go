@@ -29,7 +29,7 @@ import (
 // fzfCmd represents the fzf command
 var fzfCmd = &cobra.Command{
 	Use:   "fzf",
-	Short: "",
+	Short: "Opens fzf with available data sources",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		app.Newapp(
