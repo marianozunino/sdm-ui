@@ -2,7 +2,6 @@ package sdm
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"os/exec"
 	"strings"
@@ -55,9 +54,6 @@ func (s *SDMClient) RunCommand(args ...string) (string, error) {
 // Ready checks if the SDM client is ready and returns the state.
 func (s *SDMClient) Ready() (SdmReady, error) {
 	output, err := s.RunCommand("ready")
-
-	fmt.Printf("output: %s\n", output)
-	fmt.Printf("output: %s\n", err)
 
 	if err != nil {
 		return SdmReady{}, parseSdmError(output, err)

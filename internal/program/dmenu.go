@@ -23,6 +23,10 @@ const (
 	Wofi              = "wofi"
 )
 
+func (d DMenuCommand) String() string {
+	return string(d)
+}
+
 func (p *Program) DMenu() error {
 
 	bytesOut := new(bytes.Buffer)

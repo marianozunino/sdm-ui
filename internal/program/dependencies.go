@@ -7,14 +7,14 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var dependencies = [3]string{
+var dependencies = []string{
 	"sdm",
 	"zenity",
-	"rofi",
 }
 
-func mustHaveDependencies() {
+func mustHaveDependencies(dmenuCommand DMenuCommand) {
 	log.Debug().Msg("Checking dependencies...")
+
 	for _, dependency := range dependencies {
 		log.Debug().Msg(fmt.Sprintf("Checking dependency: %s", dependency))
 		_, err := exec.LookPath(dependency)
@@ -22,5 +22,12 @@ func mustHaveDependencies() {
 			log.Fatal().Msg(fmt.Sprintf("Dependency not found: %s", dependency))
 		}
 	}
+
+	log.Debug().Msg(fmt.Sprintf("Checking dmenu command: %s", dmenuCommand.String()))
+	_, err := exec.LookPath(dmenuCommand.String())
+	if err != nil {
+		log.Fatal().Msg(fmt.Sprintf("Dependency not found: %s", dmenuCommand.String()))
+	}
+
 	log.Debug().Msg("Dependencies OK")
 }

@@ -17,11 +17,12 @@ import (
 type Program struct {
 	account string
 
-	db           *storage.Storage
-	dbPath       string
-	keyring      libsecret.Keyring
-	sdmWrapper   sdm.SDMClient
-	dmenuCommand DMenuCommand
+	db                *storage.Storage
+	dbPath            string
+	keyring           libsecret.Keyring
+	sdmWrapper        sdm.SDMClient
+	dmenuCommand      DMenuCommand
+	blacklistPatterns []string
 }
 
 type ProgramOption func(*Program)
@@ -44,6 +45,12 @@ func WithDbPath(dbPath string) ProgramOption {
 	}
 }
 
+func WithBlacklist(patterns []string) ProgramOption {
+	return func(p *Program) {
+		p.blacklistPatterns = patterns
+	}
+}
+
 func WithCommand(command DMenuCommand) ProgramOption {
 	return func(p *Program) {
 		p.dmenuCommand = command
@@ -51,17 +58,19 @@ func WithCommand(command DMenuCommand) ProgramOption {
 }
 
 func NewProgram(opts ...ProgramOption) *Program {
-	mustHaveDependencies()
 
 	p := &Program{
-		sdmWrapper:   sdm.SDMClient{Exe: "sdm"},
-		dbPath:       xdg.DataHome,
-		dmenuCommand: Rofi,
+		sdmWrapper:        sdm.SDMClient{Exe: "sdm"},
+		dbPath:            xdg.DataHome,
+		dmenuCommand:      Rofi,
+		blacklistPatterns: []string{},
 	}
 
 	for _, opt := range opts {
 		opt(p)
 	}
+
+	mustHaveDependencies(p.dmenuCommand)
 
 	db, err := storage.NewStorage(p.account, p.dbPath)
 

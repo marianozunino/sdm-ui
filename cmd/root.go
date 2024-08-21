@@ -34,12 +34,18 @@ import (
 var cfgFile string
 
 type conf struct {
-	Email   string `mapstructure:"email"`
-	DBPath  string `mapstructure:"dbPath"`
-	Verbose bool   `mapstructure:"verbose"`
+	Email             string   `mapstructure:"email"`
+	DBPath            string   `mapstructure:"dbPath"`
+	Verbose           bool     `mapstructure:"verbose"`
+	BalcklistPatterns []string `mapstructure:"blacklistPatterns"`
 }
 
-var confData conf = conf{}
+var confData conf = conf{
+	Email:             "",
+	DBPath:            "",
+	Verbose:           false,
+	BalcklistPatterns: []string{},
+}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -119,4 +125,7 @@ func bindFlags(cmd *cobra.Command) {
 			cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
 		}
 	})
+
+	// map blacklist patterns
+	confData.BalcklistPatterns = viper.GetStringSlice("blacklistPatterns")
 }
