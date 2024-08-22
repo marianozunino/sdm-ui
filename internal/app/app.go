@@ -60,7 +60,7 @@ func WithCommand(command DMenuCommand) AppOption {
 func Newapp(opts ...AppOption) *App {
 
 	p := &App{
-		sdmWrapper:        sdm.SDMClient{Exe: "sdm"},
+		sdmWrapper:        *sdm.NewSDMClient("sdm"),
 		dbPath:            xdg.DataHome,
 		dmenuCommand:      Rofi,
 		blacklistPatterns: []string{},
@@ -130,9 +130,8 @@ func ellipsize(s string, maxLen int) string {
 	return s[:maxLen] + "..."
 }
 
-func (p *App) retryCommand(command func() error) error {
-	err := command()
-
+func (p *App) retryCommand(exec func() error) error {
+	err := exec()
 	if err == nil {
 		return nil
 	}
@@ -146,7 +145,7 @@ func (p *App) retryCommand(command func() error) error {
 
 	switch sdErr.Code {
 	case sdm.Unauthorized:
-		return p.handleUnauthorized(command)
+		return p.handleUnauthorized(exec)
 	case sdm.InvalidCredentials:
 		return p.handleInvalidCredentials(err)
 	case sdm.ResourceNotFound:

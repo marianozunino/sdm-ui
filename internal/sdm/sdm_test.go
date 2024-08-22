@@ -147,14 +147,14 @@ func TestSDMClient_Ready(t *testing.T) {
 	tests := []struct {
 		name        string
 		behavior    string
-		expected    SdmReady
+		expected    SdmReadyOutput
 		expectedErr bool
 		panics      bool
 	}{
 		{
 			name:     "SuccessfulReady",
 			behavior: cmdReadySuccessBehavior.String(),
-			expected: SdmReady{
+			expected: SdmReadyOutput{
 				IsLinked:        true,
 				StateLoaded:     true,
 				ListenerRunning: true,
@@ -164,7 +164,7 @@ func TestSDMClient_Ready(t *testing.T) {
 		{
 			name:     "NoAccount",
 			behavior: cmdReadyNoAccountBehavior.String(),
-			expected: SdmReady{
+			expected: SdmReadyOutput{
 				IsLinked:        true,
 				StateLoaded:     true,
 				ListenerRunning: true,
@@ -175,7 +175,7 @@ func TestSDMClient_Ready(t *testing.T) {
 		{
 			name:     "Error",
 			behavior: cmdReadyErrorBehavior.String(),
-			expected: SdmReady{
+			expected: SdmReadyOutput{
 				IsLinked:        true,
 				StateLoaded:     true,
 				ListenerRunning: true,

@@ -8,6 +8,7 @@ import (
 
 func (p *App) Sync() error {
 	log.Debug().Msg("Syncing...")
+
 	statusesBuffer := new(bytes.Buffer)
 
 	if err := p.retryCommand(func() error {

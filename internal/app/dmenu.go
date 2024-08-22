@@ -21,6 +21,7 @@ type DMenuCommand string
 const (
 	Rofi DMenuCommand = "rofi"
 	Wofi              = "wofi"
+	Noop              = "noop"
 )
 
 func (d DMenuCommand) String() string {

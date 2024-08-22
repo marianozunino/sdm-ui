@@ -36,6 +36,7 @@ var wipeCmd = &cobra.Command{
 			app.WithAccount(confData.Email),
 			app.WithVerbose(confData.Verbose),
 			app.WithDbPath(confData.DBPath),
+			app.WithCommand(app.Noop),
 		).WipeCache()
 	},
 }

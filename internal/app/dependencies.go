@@ -23,10 +23,12 @@ func mustHaveDependencies(dmenuCommand DMenuCommand) {
 		}
 	}
 
-	log.Debug().Msg(fmt.Sprintf("Checking dmenu command: %s", dmenuCommand.String()))
-	_, err := exec.LookPath(dmenuCommand.String())
-	if err != nil {
-		log.Fatal().Msg(fmt.Sprintf("Dependency not found: %s", dmenuCommand.String()))
+	if dmenuCommand != Noop {
+		log.Debug().Msg(fmt.Sprintf("Checking dmenu command: %s", dmenuCommand.String()))
+		_, err := exec.LookPath(dmenuCommand.String())
+		if err != nil {
+			log.Fatal().Msg(fmt.Sprintf("Dependency not found: %s", dmenuCommand.String()))
+		}
 	}
 
 	log.Debug().Msg("Dependencies OK")
