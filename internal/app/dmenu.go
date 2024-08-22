@@ -19,9 +19,9 @@ import (
 type DMenuCommand string
 
 const (
-	Rofi DMenuCommand = "rofi"
-	Wofi              = "wofi"
-	Noop              = "noop"
+	DMenuCommandRofi DMenuCommand = "rofi"
+	DMenuCommandWofi              = "wofi"
+	DMenuCommandNoop              = "noop"
 )
 
 func (d DMenuCommand) String() string {

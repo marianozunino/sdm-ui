@@ -38,9 +38,9 @@ var dmenuCmd = &cobra.Command{
 		var commandOption app.AppOption
 
 		if useWofi {
-			commandOption = app.WithCommand(app.Wofi)
+			commandOption = app.WithCommand(app.DMenuCommandWofi)
 		} else {
-			commandOption = app.WithCommand(app.Rofi)
+			commandOption = app.WithCommand(app.DMenuCommandRofi)
 		}
 
 		app.Newapp(

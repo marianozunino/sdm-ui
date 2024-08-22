@@ -17,11 +17,13 @@ import (
 type App struct {
 	account string
 
-	db                *storage.Storage
-	dbPath            string
-	keyring           libsecret.Keyring
-	sdmWrapper        sdm.SDMClient
-	dmenuCommand      DMenuCommand
+	db              *storage.Storage
+	dbPath          string
+	keyring         libsecret.Keyring
+	sdmWrapper      sdm.SDMClient
+	dmenuCommand    DMenuCommand
+	passwordCommand PasswordCommand
+
 	blacklistPatterns []string
 }
 
@@ -57,20 +59,27 @@ func WithCommand(command DMenuCommand) AppOption {
 	}
 }
 
+func WithPasswordCommand(command PasswordCommand) AppOption {
+	return func(p *App) {
+		p.passwordCommand = command
+	}
+}
+
 func Newapp(opts ...AppOption) *App {
 
 	p := &App{
 		sdmWrapper:        *sdm.NewSDMClient("sdm"),
 		dbPath:            xdg.DataHome,
-		dmenuCommand:      Rofi,
+		dmenuCommand:      DMenuCommandRofi,
 		blacklistPatterns: []string{},
+		passwordCommand:   PasswordCommandZenity,
 	}
 
 	for _, opt := range opts {
 		opt(p)
 	}
 
-	mustHaveDependencies(p.dmenuCommand)
+	p.mustHaveDependencies()
 
 	db, err := storage.NewStorage(p.account, p.dbPath)
 

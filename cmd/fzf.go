@@ -37,7 +37,8 @@ var fzfCmd = &cobra.Command{
 			app.WithVerbose(confData.Verbose),
 			app.WithDbPath(confData.DBPath),
 			app.WithBlacklist(confData.BalcklistPatterns),
-			app.WithCommand(app.Noop),
+			app.WithCommand(app.DMenuCommandNoop),
+			app.WithPasswordCommand(app.PasswordCommandCLI),
 		).Fzf()
 	},
 }
