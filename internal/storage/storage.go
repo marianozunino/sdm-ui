@@ -26,7 +26,7 @@ type Storage struct {
 func NewStorage(account string, path string) (*Storage, error) {
 	dbPath := filepath.Join(path, "sdm-sources.db")
 	log.Debug().Msgf("Opening database at %s", dbPath)
-	db, err := bolt.Open(dbPath, 0600, nil)
+	db, err := bolt.Open(dbPath, 0o600, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}

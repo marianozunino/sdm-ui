@@ -9,8 +9,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type CommandOption func(*CommandRunner, *exec.Cmd)
-type ErrorParser func(output string, err error) error
+type (
+	CommandOption func(*CommandRunner, *exec.Cmd)
+	ErrorParser   func(output string, err error) error
+)
 
 type CommandRunner struct {
 	Exe          string

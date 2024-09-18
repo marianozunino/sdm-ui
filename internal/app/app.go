@@ -66,7 +66,6 @@ func WithPasswordCommand(command PasswordCommand) AppOption {
 }
 
 func Newapp(opts ...AppOption) *App {
-
 	p := &App{
 		sdmWrapper:        *sdm.NewSDMClient("sdm"),
 		dbPath:            xdg.DataHome,
@@ -82,7 +81,6 @@ func Newapp(opts ...AppOption) *App {
 	p.mustHaveDependencies()
 
 	db, err := storage.NewStorage(p.account, p.dbPath)
-
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to open database")
 	}
@@ -170,7 +168,6 @@ func (p *App) handleUnauthorized(command func() error) error {
 	notify.Notify("SDM CLI", "Authenticating... 🔐", "", "")
 
 	password, err := p.retrievePassword()
-
 	if err != nil {
 		notify.Notify("SDM CLI", "Authentication error 🔐", err.Error(), "")
 		return err

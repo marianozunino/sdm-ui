@@ -45,7 +45,6 @@ func (p *App) applyBlacklist(dataSources []storage.DataSource) []storage.DataSou
 
 func (p *App) GetSortedDataSources() ([]storage.DataSource, error) {
 	dataSources, err := p.db.RetrieveDatasources()
-
 	if err != nil {
 		return nil, err
 	}

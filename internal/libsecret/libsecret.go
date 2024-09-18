@@ -6,8 +6,7 @@ import (
 
 const service_key = "sdm-credential"
 
-type Keyring struct {
-}
+type Keyring struct{}
 
 func (k *Keyring) GetSecret(email string) (string, error) {
 	return libsecret.Get(service_key, email)

@@ -29,7 +29,6 @@ func (d DMenuCommand) String() string {
 }
 
 func (p *App) DMenu() error {
-
 	bytesOut := new(bytes.Buffer)
 
 	if err := p.List(bytesOut); err != nil {

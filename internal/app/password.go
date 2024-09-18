@@ -84,4 +84,3 @@ func (p *App) askForPassword(pc PasswordCommand) (string, error) {
 		return "", fmt.Errorf(errMsg)
 	}
 }
-

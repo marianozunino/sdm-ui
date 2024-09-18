@@ -475,7 +475,6 @@ func TestSDMClient_Connect(t *testing.T) {
 			}
 
 			require.NoError(t, got, "Test %s failed", tt.name)
-
 		})
 	}
 }

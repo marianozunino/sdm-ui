@@ -12,9 +12,7 @@ import (
 )
 
 func (p *App) Fzf() error {
-
 	dataSources, err := p.GetSortedDataSources()
-
 	if err != nil {
 		return err
 	}
@@ -32,7 +30,6 @@ func (p *App) Fzf() error {
 			return formatStatus(dataSources[i].Status) + " " + dataSources[i].Name
 		},
 	)
-
 	if err != nil {
 		log.Error().Msg(fmt.Sprintf("Failed to execute list: %s", err))
 		return err
