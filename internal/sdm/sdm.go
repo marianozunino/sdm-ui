@@ -49,6 +49,8 @@ func (s *SDMClient) Ready() (SdmReady, error) {
 func (s *SDMClient) Logout() error {
 	return s.CommandRunner.RunCommand(
 		cmder.WithArgs("logout"),
+		cmder.WithOutput(io.Discard),
+		cmder.WithErrorParser(parseSdmError),
 	)
 }
 
@@ -58,6 +60,7 @@ func (s *SDMClient) Login(email, password string) error {
 	return s.CommandRunner.RunCommand(
 		cmder.WithArgs("login", "--email", email),
 		cmder.WithStdin(stdin),
+		cmder.WithOutput(io.Discard),
 		cmder.WithErrorParser(parseSdmError),
 	)
 }
@@ -75,5 +78,7 @@ func (s *SDMClient) Status(output io.Writer) error {
 func (s *SDMClient) Connect(dataSource string) error {
 	return s.CommandRunner.RunCommand(
 		cmder.WithArgs("connect", dataSource),
+		cmder.WithOutput(io.Discard),
+		cmder.WithErrorParser(parseSdmError),
 	)
 }
