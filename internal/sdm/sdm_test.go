@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/marianozunino/sdm-ui/internal/cmder"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -123,11 +124,11 @@ func TestMain(m *testing.M) {
 		executeCommand([]string{"logout"}, ``, 1)
 
 	case cmdStatusSuccessBehavior.String():
-		executeCommand([]string{"status"}, `random output`, 0)
+		executeCommand([]string{"status", "-j"}, `random output`, 0)
 	case cmdStatusNotAuthenticatedBehavior.String():
-		executeCommand([]string{"status"}, `You are not authenticated. Please login again.`, 9)
+		executeCommand([]string{"status", "-j"}, `You are not authenticated. Please login again.`, 9)
 	case cmdStatusErrorBehavior.String():
-		executeCommand([]string{"status"}, ``, 1)
+		executeCommand([]string{"status", "-j"}, ``, 1)
 
 	case cmdConnectSuccessBehavior.String():
 		executeCommand([]string{"connect", "resource_name"}, `random output`, 0)
@@ -147,14 +148,14 @@ func TestSDMClient_Ready(t *testing.T) {
 	tests := []struct {
 		name        string
 		behavior    string
-		expected    SdmReadyOutput
+		expected    SdmReady
 		expectedErr bool
 		panics      bool
 	}{
 		{
 			name:     "SuccessfulReady",
 			behavior: cmdReadySuccessBehavior.String(),
-			expected: SdmReadyOutput{
+			expected: SdmReady{
 				IsLinked:        true,
 				StateLoaded:     true,
 				ListenerRunning: true,
@@ -164,7 +165,7 @@ func TestSDMClient_Ready(t *testing.T) {
 		{
 			name:     "NoAccount",
 			behavior: cmdReadyNoAccountBehavior.String(),
-			expected: SdmReadyOutput{
+			expected: SdmReady{
 				IsLinked:        true,
 				StateLoaded:     true,
 				ListenerRunning: true,
@@ -175,7 +176,7 @@ func TestSDMClient_Ready(t *testing.T) {
 		{
 			name:     "Error",
 			behavior: cmdReadyErrorBehavior.String(),
-			expected: SdmReadyOutput{
+			expected: SdmReady{
 				IsLinked:        true,
 				StateLoaded:     true,
 				ListenerRunning: true,
@@ -190,7 +191,11 @@ func TestSDMClient_Ready(t *testing.T) {
 			testExe, err := os.Executable()
 			require.NoError(t, err, "can't determine current executable")
 
-			sdmWrapper := SDMClient{Exe: testExe}
+			sdmWrapper := SDMClient{
+				CommandRunner: &cmder.CommandRunner{
+					Exe: testExe,
+				},
+			}
 			os.Setenv(testSdmBehavior, tt.behavior)
 			defer os.Unsetenv(testSdmBehavior)
 
@@ -259,7 +264,11 @@ func TestSDMClient_Login(t *testing.T) {
 			testExe, err := os.Executable()
 			require.NoError(t, err, "can't determine current executable")
 
-			sdmWrapper := SDMClient{Exe: testExe}
+			sdmWrapper := SDMClient{
+				CommandRunner: &cmder.CommandRunner{
+					Exe: testExe,
+				},
+			}
 			os.Setenv(testSdmBehavior, tt.behavior)
 			defer os.Unsetenv(testSdmBehavior)
 
@@ -317,7 +326,11 @@ func TestSDMClient_Logout(t *testing.T) {
 			testExe, err := os.Executable()
 			require.NoError(t, err, "can't determine current executable")
 
-			sdmWrapper := SDMClient{Exe: testExe}
+			sdmWrapper := SDMClient{
+				CommandRunner: &cmder.CommandRunner{
+					Exe: testExe,
+				},
+			}
 			os.Setenv(testSdmBehavior, tt.behavior.String())
 			defer os.Unsetenv(testSdmBehavior)
 
@@ -381,7 +394,11 @@ func TestSDMClient_Status(t *testing.T) {
 			testExe, err := os.Executable()
 			require.NoError(t, err, "can't determine current executable")
 
-			sdmWrapper := SDMClient{Exe: testExe}
+			sdmWrapper := SDMClient{
+				CommandRunner: &cmder.CommandRunner{
+					Exe: testExe,
+				},
+			}
 			os.Setenv(testSdmBehavior, tt.behavior.String())
 			defer os.Unsetenv(testSdmBehavior)
 
@@ -451,7 +468,11 @@ func TestSDMClient_Connect(t *testing.T) {
 			testExe, err := os.Executable()
 			require.NoError(t, err, "can't determine current executable")
 
-			sdmWrapper := SDMClient{Exe: testExe}
+			sdmWrapper := SDMClient{
+				CommandRunner: &cmder.CommandRunner{
+					Exe: testExe,
+				},
+			}
 			os.Setenv(testSdmBehavior, tt.behavior.String())
 			defer os.Unsetenv(testSdmBehavior)
 
