@@ -1,13 +1,13 @@
 module github.com/marianozunino/sdm-ui
 
-go 1.21.6
+go 1.23.0
 
 require (
 	git.sr.ht/~marianozunino/go-rofi v0.3.0
 	github.com/Masterminds/semver/v3 v3.3.0
 	github.com/adrg/xdg v0.5.0
 	github.com/jarcoal/httpmock v1.3.1
-	github.com/minio/selfupdate v0.6.0
+	github.com/marianozunino/selfupdater v1.0.1
 	github.com/rs/zerolog v1.33.0
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/afero v1.11.0
@@ -33,6 +33,8 @@ require (
 	github.com/gdamore/encoding v1.0.0 // indirect
 	github.com/gdamore/tcell/v2 v2.6.0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
+	github.com/google/go-github/v66 v66.0.0 // indirect
+	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josephspurrier/goversioninfo v1.4.0 // indirect
@@ -42,6 +44,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
+	github.com/minio/selfupdate v0.6.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/nsf/termbox-go v1.1.1 // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
