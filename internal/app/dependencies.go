@@ -1,34 +1,53 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
 
 	"github.com/rs/zerolog/log"
 )
 
-var dependencies = []string{
-	"sdm",
-}
+// ErrDependencyNotFound is returned when a required dependency is not found
+var ErrDependencyNotFound = errors.New("dependency not found")
 
-func (app *App) mustHaveDependencies() {
+// mustHaveDependencies checks if all required dependencies are available
+func (app *App) mustHaveDependencies() error {
 	log.Debug().Msg("Checking dependencies...")
 
+	// Create a fresh slice to avoid modifying the static dependencies slice
+	requiredDeps := []string{"sdm"}
+
+	// Add password command dependency if needed
 	if app.passwordCommand == PasswordCommandZenity {
-		dependencies = append(dependencies, "zenity")
+		requiredDeps = append(requiredDeps, "zenity")
 	}
 
+	// Add dmenu command dependency if needed
 	if app.dmenuCommand != DMenuCommandNoop {
-		dependencies = append(dependencies, app.dmenuCommand.String())
+		requiredDeps = append(requiredDeps, app.dmenuCommand.String())
 	}
 
-	for _, dependency := range dependencies {
-		log.Debug().Msg(fmt.Sprintf("Checking dependency: %s", dependency))
-		_, err := exec.LookPath(dependency)
+	// Check for each dependency
+	for _, dependency := range requiredDeps {
+		log.Debug().Str("dependency", dependency).Msg("Checking dependency")
+
+		path, err := exec.LookPath(dependency)
 		if err != nil {
-			log.Fatal().Msg(fmt.Sprintf("Dependency not found: %s", dependency))
+			log.Error().
+				Err(err).
+				Str("dependency", dependency).
+				Msg("Dependency not found")
+
+			return fmt.Errorf("%w: %s", ErrDependencyNotFound, dependency)
 		}
+
+		log.Debug().
+			Str("dependency", dependency).
+			Str("path", path).
+			Msg("Dependency found")
 	}
 
-	log.Debug().Msg("Dependencies OK")
+	log.Debug().Msg("All dependencies available")
+	return nil
 }

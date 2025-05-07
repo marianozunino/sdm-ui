@@ -1,5 +1,5 @@
 /*
-Copyright © 2024 Mariano Zunino <marianoz@posteo.net>
+Copyright © 2025 Mariano Zunino <marianoz@posteo.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,12 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
+	"os"
+	"time"
+
 	"github.com/marianozunino/sdm-ui/internal/app"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -30,15 +35,38 @@ import (
 var wipeCmd = &cobra.Command{
 	Use:   "wipe",
 	Short: "Wipe the SDM UI cache db",
-	Long:  ``,
+	Long:  `Deletes all cached SDM data and forces a fresh synchronization on next use.`,
+	Example: `  # Wipe the cache database
+  sdm-ui wipe`,
 	Run: func(cmd *cobra.Command, args []string) {
-		app.Newapp(
+		// Create application instance
+		application, err := app.NewApp(
 			app.WithAccount(confData.Email),
 			app.WithVerbose(confData.Verbose),
 			app.WithDbPath(confData.DBPath),
 			app.WithCommand(app.DMenuCommandNoop),
 			app.WithPasswordCommand(app.PasswordCommandCLI),
-		).WipeCache()
+			app.WithTimeout(30*time.Second),
+		)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to initialize application")
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		// Ensure proper resource cleanup
+		defer func() {
+			if err := application.Close(); err != nil {
+				log.Warn().Err(err).Msg("Error while closing application resources")
+			}
+		}()
+
+		// Run wipe command with error handling
+		if err := application.WipeCache(); err != nil {
+			log.Error().Err(err).Msg("Cache wipe operation failed")
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 	},
 }
 

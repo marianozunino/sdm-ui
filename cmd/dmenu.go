@@ -1,5 +1,5 @@
 /*
-Copyright © 2024 Mariano Zunino <marianoz@posteo.net>
+Copyright © 2025 Mariano Zunino <marianoz@posteo.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,43 +22,81 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
+	"os"
+	"time"
+
 	"github.com/marianozunino/sdm-ui/internal/app"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
-var useWofi bool
-var useRofi bool
+var (
+	useWofi bool
+	useRofi bool
+)
 
 // dmenuCmd represents the dmenu command
 var dmenuCmd = &cobra.Command{
 	Use:   "dmenu",
 	Short: "Opens dmenu with available data sources",
-	Long:  ``,
+	Long:  `Displays a menu of available SDM data sources using either rofi or wofi and allows selecting one to connect.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		// Determine which menu command to use
 		var commandOption app.AppOption
-
 		if useWofi {
 			commandOption = app.WithCommand(app.DMenuCommandWofi)
+			log.Debug().Msg("Using wofi as menu command")
 		} else {
 			commandOption = app.WithCommand(app.DMenuCommandRofi)
+			log.Debug().Msg("Using rofi as menu command")
 		}
 
-		app.Newapp(
+		// Create application instance
+		application, err := app.NewApp(
 			app.WithAccount(confData.Email),
 			app.WithVerbose(confData.Verbose),
 			app.WithDbPath(confData.DBPath),
-			app.WithBlacklist(confData.BalcklistPatterns),
+			app.WithBlacklist(confData.BlacklistPatterns),
 			commandOption,
-		).DMenu()
+			app.WithTimeout(30*time.Second),
+		)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to initialize application")
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 
+		// Ensure proper resource cleanup
+		defer func() {
+			if err := application.Close(); err != nil {
+				log.Warn().Err(err).Msg("Error while closing application resources")
+			}
+		}()
+
+		// Run dmenu command with error handling
+		if err := application.DMenu(); err != nil {
+			log.Error().Err(err).Msg("DMenu operation failed")
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(dmenuCmd)
+
+	// Add menu selection flags
 	dmenuCmd.Flags().BoolVarP(&useWofi, "wofi", "w", false, "use wofi as dmenu")
 	dmenuCmd.Flags().BoolVarP(&useRofi, "rofi", "r", true, "use rofi as dmenu")
-	// exclusive flags
+
+	// Make flags mutually exclusive
 	dmenuCmd.MarkFlagsMutuallyExclusive("wofi", "rofi")
 
+	// Add usage examples to help text
+	dmenuCmd.Example = `  # Use rofi (default)
+  sdm-ui dmenu
+
+  # Use wofi instead
+  sdm-ui dmenu --wofi`
 }

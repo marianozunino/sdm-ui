@@ -1,5 +1,5 @@
 /*
-Copyright © 2024 Mariano Zunino <marianoz@posteo.net>
+Copyright © 2025 Mariano Zunino <marianoz@posteo.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,24 +22,50 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
+	"os"
+	"time"
+
 	"github.com/marianozunino/sdm-ui/internal/app"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
 // syncCmd represents the sync command
 var syncCmd = &cobra.Command{
 	Use:   "sync",
-	Short: "Syncronizes the internal cache",
-	Long:  ``,
+	Short: "Synchronizes the internal cache",
+	Long:  `Fetches the latest data from SDM and updates the local cache database`,
 	Run: func(cmd *cobra.Command, args []string) {
-		app.Newapp(
+		// Create application with options
+		application, err := app.NewApp(
 			app.WithAccount(confData.Email),
 			app.WithVerbose(confData.Verbose),
 			app.WithDbPath(confData.DBPath),
-			app.WithBlacklist(confData.BalcklistPatterns),
+			app.WithBlacklist(confData.BlacklistPatterns),
 			app.WithCommand(app.DMenuCommandNoop),
 			app.WithPasswordCommand(app.PasswordCommandCLI),
-		).Sync()
+			app.WithTimeout(30*time.Second),
+		)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to initialize application")
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		// Ensure proper cleanup
+		defer func() {
+			if err := application.Close(); err != nil {
+				log.Warn().Err(err).Msg("Error while closing application resources")
+			}
+		}()
+
+		// Run synchronization
+		if err := application.Sync(); err != nil {
+			log.Error().Err(err).Msg("Synchronization failed")
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 	},
 }
 

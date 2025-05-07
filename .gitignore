@@ -3,6 +3,5 @@ sdm-ui
 sources.db
 tmp/
 bb
-
 dist/
 *.db

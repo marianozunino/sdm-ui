@@ -11,7 +11,7 @@ func (p *App) Sync() error {
 
 	statusesBuffer := new(bytes.Buffer)
 
-	if err := p.retryCommand(func() error {
+	if err := p.RetryCommand(func() error {
 		statusesBuffer.Reset()
 		return p.sdmWrapper.Status(statusesBuffer)
 	}); err != nil {

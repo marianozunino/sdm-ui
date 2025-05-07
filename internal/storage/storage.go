@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strconv"
@@ -11,233 +12,385 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
+// Database constants
 const (
 	datasourceBucketPrefix = "datasource"
 	currentDBVersion       = 2 // increment this whenever the database schema changes
 	retentionPeriod        = 2
+	defaultTimeout         = 5 * time.Second
 )
 
+// Common errors
+var (
+	ErrBucketNotFound     = errors.New("bucket not found")
+	ErrDataSourceNotFound = errors.New("datasource not found")
+	ErrDatabaseClosed     = errors.New("database is closed")
+)
+
+// Storage manages persistence of data sources using BoltDB
 type Storage struct {
 	*bolt.DB
 	account string
+	timeout time.Duration
 }
 
-// NewStorage initializes and returns a new Storage instance, ensuring that the bucket for the given account is created.
-func NewStorage(account string, path string) (*Storage, error) {
+// StorageOption is a function option for configuring the Storage
+type StorageOption func(*Storage)
+
+// WithTimeout sets a custom timeout for database operations
+func WithTimeout(timeout time.Duration) StorageOption {
+	return func(s *Storage) {
+		s.timeout = timeout
+	}
+}
+
+// NewStorage initializes and returns a new Storage instance
+func NewStorage(account string, path string, opts ...StorageOption) (*Storage, error) {
+	if account == "" {
+		return nil, errors.New("account cannot be empty")
+	}
+
 	dbPath := filepath.Join(path, "sdm-sources.db")
-	log.Debug().Msgf("Opening database at %s", dbPath)
-	db, err := bolt.Open(dbPath, 0o600, nil)
+	log.Debug().Str("path", dbPath).Msg("Opening database")
+
+	// Open database with options
+	options := &bolt.Options{
+		Timeout: defaultTimeout,
+	}
+
+	db, err := bolt.Open(dbPath, 0o600, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
+
 	storage := &Storage{
 		DB:      db,
 		account: account,
-	}
-	if err := storage.ensureBucketExists(); err != nil {
-		return nil, err
+		timeout: defaultTimeout,
 	}
 
-	storage.removeOldBuckets(retentionPeriod)
+	// Apply options
+	for _, opt := range opts {
+		opt(storage)
+	}
+
+	// Initialize bucket
+	if err := storage.ensureBucketExists(); err != nil {
+		// Close DB if initialization fails
+		db.Close()
+		return nil, fmt.Errorf("failed to initialize database: %w", err)
+	}
+
+	// Perform maintenance
+	if err := storage.removeOldBuckets(retentionPeriod); err != nil {
+		log.Warn().Err(err).Msg("Failed to remove old buckets during initialization")
+	}
+
 	return storage, nil
 }
 
-// ensureBucketExists ensures that the bucket for the given account exists in the database.
+// Close closes the database connection
+func (s *Storage) Close() error {
+	if s.DB == nil {
+		return ErrDatabaseClosed
+	}
+
+	log.Debug().Msg("Closing database connection")
+	return s.DB.Close()
+}
+
+// ensureBucketExists ensures that the bucket for the account exists
 func (s *Storage) ensureBucketExists() error {
 	bucketKey := buildBucketKey(s.account, currentDBVersion)
+	log.Debug().Str("bucket", string(bucketKey)).Msg("Ensuring bucket exists")
+
 	return s.Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists(bucketKey)
 		if err != nil {
-			return fmt.Errorf("failed to create bucket for account %s with key %s: %w", s.account, bucketKey, err)
+			return fmt.Errorf("failed to create bucket: %w", err)
 		}
 		return nil
 	})
 }
 
-// buildBucketKey constructs a bucket key using the account and the database version.
+// buildBucketKey constructs a bucket key
 func buildBucketKey(account string, version int) []byte {
 	return []byte(fmt.Sprintf("%s:%s:v%d", account, datasourceBucketPrefix, version))
 }
 
-// // StoreServers stores the provided datasources for the specified account.
-// func (s *Storage) StoreServers(datasources []DataSource) error {
-// 	bucketKey := buildBucketKey(s.account, currentDBVersion)
-// 	return s.Update(func(tx *bolt.Tx) error {
-// 		log.Debug().Msgf("Storing %d datasources", len(datasources))
-// 		bucket := tx.Bucket(bucketKey)
-// 		if bucket == nil {
-// 			return fmt.Errorf("bucket for account %s not found", s.account)
-// 		}
-// 		for _, ds := range datasources {
-// 			// Encode the DataSource and handle any errors
-// 			encodedData, err := ds.Encode()
-// 			if err != nil {
-// 				return fmt.Errorf("failed to encode datasource %s: %w", ds.Name, err)
-// 			}
-// 			// Store the encoded DataSource in the bucket
-// 			if err := bucket.Put(ds.Key(), encodedData); err != nil {
-// 				return fmt.Errorf("failed to store datasource %s: %w", ds.Name, err)
-// 			}
-// 		}
-// 		log.Debug().Msgf("Successfully stored %d datasources", len(datasources))
-// 		return nil
-// 	})
-// }
-
-// StoreServers stores the provided datasources for the specified account.
+// StoreServers stores the provided datasources
 func (s *Storage) StoreServers(datasources []DataSource) error {
+	if len(datasources) == 0 {
+		log.Debug().Msg("No datasources to store")
+		return nil
+	}
+
 	bucketKey := buildBucketKey(s.account, currentDBVersion)
+	log.Debug().
+		Int("count", len(datasources)).
+		Str("bucket", string(bucketKey)).
+		Msg("Storing datasources")
+
 	return s.Update(func(tx *bolt.Tx) error {
-		log.Debug().Msgf("Storing %d datasources", len(datasources))
 		bucket := tx.Bucket(bucketKey)
 		if bucket == nil {
-			return fmt.Errorf("bucket for account %s not found", s.account)
+			return ErrBucketNotFound
 		}
+
+		successCount := 0
 		for _, ds := range datasources {
-			// Retrieve the existing DataSource from the database
+			// Preserve existing LRU value if present
 			existingData := bucket.Get(ds.Key())
 			if existingData != nil {
 				var existingDS DataSource
 				if err := existingDS.Decode(existingData); err != nil {
-					return fmt.Errorf("failed to decode existing datasource %s: %w", ds.Name, err)
+					log.Warn().
+						Err(err).
+						Str("name", ds.Name).
+						Msg("Failed to decode existing datasource")
+				} else {
+					ds.LRU = existingDS.LRU
 				}
-				// Update the LRU value of the existing DataSource
-				ds.LRU = existingDS.LRU
 			}
 
-			// Encode the updated DataSource and handle any errors
+			// Encode and store the datasource
 			encodedData, err := ds.Encode()
 			if err != nil {
-				return fmt.Errorf("failed to encode datasource %s: %w", ds.Name, err)
+				log.Error().
+					Err(err).
+					Str("name", ds.Name).
+					Msg("Failed to encode datasource")
+				continue
 			}
-			// Store the encoded DataSource in the bucket
+
 			if err := bucket.Put(ds.Key(), encodedData); err != nil {
-				return fmt.Errorf("failed to store datasource %s: %w", ds.Name, err)
+				log.Error().
+					Err(err).
+					Str("name", ds.Name).
+					Msg("Failed to store datasource")
+				continue
 			}
+
+			successCount++
 		}
-		log.Debug().Msgf("Successfully stored %d datasources", len(datasources))
+
+		log.Debug().
+			Int("total", len(datasources)).
+			Int("success", successCount).
+			Msg("Stored datasources")
+
 		return nil
 	})
 }
 
-// RetrieveDatasources retrieves all datasources for the specified account.
+// RetrieveDatasources retrieves all datasources
 func (s *Storage) RetrieveDatasources() ([]DataSource, error) {
-	var datasources []DataSource
 	bucketKey := buildBucketKey(s.account, currentDBVersion)
+	log.Debug().Str("bucket", string(bucketKey)).Msg("Retrieving datasources")
+
+	var datasources []DataSource
+
 	err := s.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(bucketKey)
 		if bucket == nil {
-			return fmt.Errorf("bucket for account %s not found", s.account)
+			return ErrBucketNotFound
 		}
-		cursor := bucket.Cursor()
-		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
+
+		// Pre-allocate with reasonable capacity
+		datasources = make([]DataSource, 0, 100)
+
+		// Iterate through all entries
+		return bucket.ForEach(func(k, v []byte) error {
 			var ds DataSource
 			if err := ds.Decode(v); err != nil {
-				log.Error().Msgf("Failed to decode datasource: %v", err)
-				continue
+				log.Warn().
+					Err(err).
+					Str("key", string(k)).
+					Msg("Failed to decode datasource")
+				return nil // Continue despite error
 			}
+
 			datasources = append(datasources, ds)
-		}
-		return nil
+			return nil
+		})
 	})
-	return datasources, err
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debug().Int("count", len(datasources)).Msg("Retrieved datasources")
+	return datasources, nil
 }
 
-// GetDatasource retrieves a single datasource by name for the specified account.
+// GetDatasource retrieves a single datasource by name
 func (s *Storage) GetDatasource(name string) (DataSource, error) {
-	var datasource DataSource
+	if name == "" {
+		return DataSource{}, fmt.Errorf("datasource name cannot be empty")
+	}
+
 	bucketKey := buildBucketKey(s.account, currentDBVersion)
+	log.Debug().
+		Str("name", name).
+		Str("bucket", string(bucketKey)).
+		Msg("Retrieving datasource")
+
+	var datasource DataSource
+
 	err := s.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(bucketKey)
 		if bucket == nil {
-			return fmt.Errorf("bucket for account %s not found", bucketKey)
+			return ErrBucketNotFound
 		}
+
 		value := bucket.Get([]byte(name))
 		if value == nil {
-			return fmt.Errorf("datasource %s not found", name)
+			return ErrDataSourceNotFound
 		}
+
 		if err := datasource.Decode(value); err != nil {
-			return fmt.Errorf("failed to decode datasource %s: %w", name, err)
+			return fmt.Errorf("failed to decode datasource: %w", err)
 		}
+
 		return nil
 	})
-	return datasource, err
+	if err != nil {
+		log.Debug().
+			Err(err).
+			Str("name", name).
+			Msg("Failed to retrieve datasource")
+		return DataSource{}, err
+	}
+
+	return datasource, nil
 }
 
+// UpdateLastUsed updates the last used timestamp of a datasource
 func (s *Storage) UpdateLastUsed(ds DataSource) error {
+	if ds.Name == "" {
+		return fmt.Errorf("datasource name cannot be empty")
+	}
+
+	// Update timestamp
 	ds.LRU = time.Now().Unix()
+
 	bucketKey := buildBucketKey(s.account, currentDBVersion)
+	log.Debug().
+		Str("name", ds.Name).
+		Int64("timestamp", ds.LRU).
+		Msg("Updating last used timestamp")
+
 	return s.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(bucketKey)
 		if bucket == nil {
-			return fmt.Errorf("bucket for account %s not found", s.account)
+			return ErrBucketNotFound
 		}
 
-		// Encode the DataSource and handle any errors
+		// Encode and store
 		encodedData, err := ds.Encode()
 		if err != nil {
-			return fmt.Errorf("failed to encode datasource %s: %w", ds.Name, err)
+			return fmt.Errorf("failed to encode datasource: %w", err)
 		}
 
-		// Store the encoded DataSource in the bucket
 		if err := bucket.Put(ds.Key(), encodedData); err != nil {
-			return fmt.Errorf("failed to store datasource %s: %w", ds.Name, err)
+			return fmt.Errorf("failed to store datasource: %w", err)
 		}
 
 		return nil
 	})
 }
 
-// removeOldBuckets removes old buckets that are older than the specified retention period.
+// removeOldBuckets removes buckets older than the retention period
 func (s *Storage) removeOldBuckets(retentionPeriod int) error {
+	log.Debug().Int("retention_period", retentionPeriod).Msg("Removing old buckets")
+
 	return s.Update(func(tx *bolt.Tx) error {
-		c := tx.Cursor()
-		for k, _ := c.First(); k != nil; k, _ = c.Next() {
-			parts := strings.Split(string(k), ":")
+		var bucketsToDelete [][]byte
+
+		// First pass: identify buckets to delete
+		err := tx.ForEach(func(name []byte, _ *bolt.Bucket) error {
+			bucketName := string(name)
+			parts := strings.Split(bucketName, ":")
 
 			if len(parts) == 2 {
-				log.Debug().Msgf("Removing bucket without version: %s", k)
-				if err := tx.DeleteBucket([]byte(k)); err != nil {
-					return fmt.Errorf("failed to delete bucket %s: %w", k, err)
+				// Legacy bucket without version
+				log.Debug().Str("bucket", bucketName).Msg("Found legacy bucket to remove")
+				bucketsToDelete = append(bucketsToDelete, name)
+			} else if len(parts) == 3 && strings.HasPrefix(parts[0], s.account) {
+				// Check versioned bucket
+				versionStr := parts[2]
+				if !strings.HasPrefix(versionStr, "v") {
+					log.Warn().Str("bucket", bucketName).Msg("Invalid version format in bucket name")
+					return nil
 				}
-				continue
-			} else if len(parts) == 3 {
-				var version int
-				// Bucket has a version
-				var err error
-				version, err = strconv.Atoi(parts[len(parts)-1][1:])
+
+				version, err := strconv.Atoi(versionStr[1:])
 				if err != nil {
-					log.Error().Msgf("Failed to parse version from bucket: %s, error: %v", k, err)
-					continue
+					log.Warn().
+						Err(err).
+						Str("bucket", bucketName).
+						Msg("Failed to parse version")
+					return nil
 				}
 
 				if currentDBVersion-version > retentionPeriod {
-					log.Debug().Msgf("Removing old bucket: %s", k)
-					if err := tx.DeleteBucket([]byte(k)); err != nil {
-						return fmt.Errorf("failed to delete bucket %s: %w", k, err)
-					}
+					log.Debug().
+						Str("bucket", bucketName).
+						Int("version", version).
+						Msg("Found old bucket to remove")
+					bucketsToDelete = append(bucketsToDelete, name)
 				}
-			} else {
-				log.Error().Msgf("Failed to parse bucket: %s", k)
-				continue
 			}
 
+			return nil
+		})
+		if err != nil {
+			return fmt.Errorf("failed to enumerate buckets: %w", err)
 		}
+
+		// Second pass: delete the identified buckets
+		for _, name := range bucketsToDelete {
+			log.Debug().Str("bucket", string(name)).Msg("Removing bucket")
+			if err := tx.DeleteBucket(name); err != nil {
+				log.Warn().
+					Err(err).
+					Str("bucket", string(name)).
+					Msg("Failed to delete bucket")
+				// Continue with other buckets
+			}
+		}
+
+		log.Debug().Int("count", len(bucketsToDelete)).Msg("Removed old buckets")
 		return nil
 	})
 }
 
+// Wipe removes all buckets for the current account
 func (s *Storage) Wipe() error {
+	log.Debug().Str("account", s.account).Msg("Wiping database for account")
+
 	return s.Update(func(tx *bolt.Tx) error {
-		c := tx.Cursor()
-		for k, _ := c.First(); k != nil; k, _ = c.Next() {
-			log.Debug().Msgf("Removing bucket: %s", k)
-			if strings.HasPrefix(string(k), s.account) {
-				if err := tx.DeleteBucket([]byte(k)); err != nil {
-					return fmt.Errorf("failed to delete bucket %s: %w", k, err)
-				}
+		var bucketsToDelete [][]byte
+
+		// First pass: identify buckets to delete
+		err := tx.ForEach(func(name []byte, _ *bolt.Bucket) error {
+			if strings.HasPrefix(string(name), s.account) {
+				bucketsToDelete = append(bucketsToDelete, name)
+			}
+			return nil
+		})
+		if err != nil {
+			return fmt.Errorf("failed to enumerate buckets: %w", err)
+		}
+
+		// Second pass: delete the identified buckets
+		for _, name := range bucketsToDelete {
+			log.Debug().Str("bucket", string(name)).Msg("Removing bucket")
+			if err := tx.DeleteBucket(name); err != nil {
+				return fmt.Errorf("failed to delete bucket %s: %w", string(name), err)
 			}
 		}
+
+		log.Debug().Int("count", len(bucketsToDelete)).Msg("Wiped buckets for account")
 		return nil
 	})
 }

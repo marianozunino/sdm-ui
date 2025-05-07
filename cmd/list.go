@@ -1,5 +1,5 @@
 /*
-Copyright © 2024 Mariano Zunino <marianoz@posteo.net>
+Copyright © 2025 Mariano Zunino <marianoz@posteo.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,9 +22,12 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
 	"os"
+	"time"
 
 	"github.com/marianozunino/sdm-ui/internal/app"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -32,16 +35,40 @@ import (
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List SDM resources",
-	Long:  ``,
+	Long:  `Displays all available SDM resources in a formatted table.`,
+	Example: `  # List all SDM resources
+  sdm-ui list`,
+	Aliases: []string{"ls"},
 	Run: func(cmd *cobra.Command, args []string) {
-		app.Newapp(
+		// Create application instance
+		application, err := app.NewApp(
 			app.WithAccount(confData.Email),
 			app.WithVerbose(confData.Verbose),
 			app.WithDbPath(confData.DBPath),
-			app.WithBlacklist(confData.BalcklistPatterns),
+			app.WithBlacklist(confData.BlacklistPatterns),
 			app.WithCommand(app.DMenuCommandNoop),
 			app.WithPasswordCommand(app.PasswordCommandCLI),
-		).List(os.Stdout)
+			app.WithTimeout(30*time.Second),
+		)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to initialize application")
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		// Ensure proper resource cleanup
+		defer func() {
+			if err := application.Close(); err != nil {
+				log.Warn().Err(err).Msg("Error while closing application resources")
+			}
+		}()
+
+		// Run list command with error handling
+		if err := application.List(os.Stdout, true); err != nil {
+			log.Error().Err(err).Msg("List operation failed")
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 	},
 }
 
