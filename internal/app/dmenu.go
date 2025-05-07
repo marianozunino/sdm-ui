@@ -139,7 +139,7 @@ func (p *App) handleSelectedEntry(selectedEntry string) error {
 
 	// Get the data source name
 	selectedDS := fields[0]
-	log.Info().Str("datasource", selectedDS).Msg("Selected data source")
+	log.Debug().Str("datasource", selectedDS).Msg("Selected data source")
 
 	if selectedDS == "" {
 		log.Warn().Msg("Empty data source name")
@@ -235,7 +235,7 @@ func (p *App) notifyDataSourceConnected(ds storage.DataSource) {
 
 	// Show desktop notification
 	notify.Notify("SDM CLI", title, message, "")
-	log.Info().
+	log.Debug().
 		Str("name", ds.Name).
 		Str("address", ds.Address).
 		Msg("Data source connected notification sent")
