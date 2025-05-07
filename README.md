@@ -1,18 +1,66 @@
-# SDM Wrapper
+# SDM UI
 
-## Why Use the SDM Wrapper?
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
-- **Performance**: The `sdm` command can be slow, especially when listing statuses/resources (`sdm status`). This issue might be exacerbated if you're outside the US.
-- **User Interface**: `sdm` lacks a UI for Linux, which, combined with its performance issues, makes the experience less than ideal.
-- **Personal Challenge**: Because it's a fun project and a great learning opportunity.
+A modern wrapper for the StrongDM CLI focused on improving developer experience on Linux platforms.
+
+```
+ ___ ___  __  __   _   _ ___
+/ __|   \|  \/  | | | | |_ _|
+\__ \ |) | |\/| | | |_| || |
+|___/___/|_|  |_|  \___/|___|
+```
+
+## Overview
+
+SDM UI enhances the StrongDM CLI (`sdm`) experience by providing:
+
+- **Faster resource access**: Caches resources locally for quick access
+- **User-friendly menus**: Integrates with UI tools like rofi, wofi, and fzf
+- **Simplified authentication**: Manages credentials securely
+- **Smart features**: Sorts resources by most recently used
 
 ## Installation
 
-To install the SDM Wrapper, run:
+### From Source
 
 ```bash
 go install github.com/marianozunino/sdm-ui@latest
 ```
+
+### From Binary Releases
+
+Download the latest release from the [Releases page](https://github.com/marianozunino/sdm-ui/releases).
+
+## Dependencies
+
+- [StrongDM CLI](https://www.strongdm.com/docs/admin-ui/cli-reference)
+- One of the following UI tools:
+  - [rofi](https://github.com/davatorium/rofi) (default)
+  - [wofi](https://hg.sr.ht/~scoopta/wofi)
+  - [fzf](https://github.com/junegunn/fzf)
+- [zenity](https://github.com/ncruces/zenity) (for GUI password prompts)
+
+## Configuration
+
+Create a configuration file at `$XDG_CONFIG_HOME/sdm-ui.yaml`:
+
+```yaml
+email: "your.email@example.com"
+verbose: true
+blacklistPatterns:
+  - ".*prod.*" # Exclude production resources
+  - "*rds*" # Exclude RDS resources
+```
+
+Available settings:
+
+| Setting           | Description                                 | Default        |
+| ----------------- | ------------------------------------------- | -------------- |
+| email             | Your StrongDM email address                 | (required)     |
+| verbose           | Enable verbose logging                      | false          |
+| dbPath            | Path to database directory                  | $XDG_DATA_HOME |
+| blacklistPatterns | Regular expressions to filter out resources | []             |
 
 ## Usage
 
@@ -21,64 +69,43 @@ Usage:
   sdm-ui [command]
 
 Available Commands:
-  completion  Generate the autocompletion script for the specified shell
-  dmenu       Opens dmenu with available data sources
-  fzf         Opens fzf with available data sources
+  completion  Generate shell completion scripts
+  dmenu       Open resource selector using rofi/wofi
+  fzf         Open resource selector using fzf
   help        Help about any command
-  list        List SDM resources
-  sync        Syncronizes the internal cache
-  version     Print the version number of sdm ui
-  wipe        Wipe the SDM UI cache db
+  list | ls   List available SDM resources
+  sync        Synchronize the local resource cache
+  update      Update sdm-ui to the latest version
+  version     Show version information
+  wipe        Clear the local resource cache
 
 Flags:
-      --config string   config file (default "/home/forbi/.config/sdm-ui.yaml")
-  -d, --db string       database path (default "/home/forbi/.local/share")
-  -e, --email string    email address (overrides config file)
-  -h, --help            help for sdm-ui
-  -v, --verbose         verbose output (overrides config file)
+      --config string   Config file (default "$XDG_CONFIG_HOME/sdm-ui.yaml")
+  -d, --db string       Database path (default "$XDG_DATA_HOME")
+  -e, --email string    Email address (required)
+  -h, --help            Help about any command
+  -v, --verbose         Enable verbose output
 ```
 
-### Configuration
+## Quick Start
 
-The SDM Wrapper can be configured using a YAML file located at `$XDG_CONFIG_HOME/sdm-ui.yaml`. Here's an example configuration:
+1. Set up your configuration file with your email address
+2. Run `sdm-ui sync` to cache resources
+3. Use `sdm-ui dmenu` or `sdm-ui fzf` to select and connect to resources
 
-```yaml
-email: some_email@example.com
-verbose: true
-blacklistPatterns:
-  - "*rds*"
-  - "prod*"
-  - "es-logs$"
-```
+## Tips
 
-The available configuration options are:
-
-- `email`: Your email address used for authentication with the StrongDM platform.
-- `verbose`: Enable verbose output.
-- `blacklistPatterns`: A list of regular expression patterns used to filter out unwanted data sources.
-
-You can also override the configuration options using command-line flags, as shown in the Usage section.
-
-### How Does the Wrapper Address These Issues?
-
-#### Slow Status
-
-The typical workflow with `sdm` involves:
-
-1. Running `sdm status | grep <something>` to filter the list of resources (e.g., `sdm status | grep rds` to find RDS resources).
-2. Using `sdm connect <resource>` to connect to the selected resource.
-
-The SDM Wrapper improves this by caching the resource list using [bbolt](https://github.com/etcd-io/bbolt). This makes resource retrieval faster and more efficient. The cache is populated automatically when you connect to a resource.
-
-#### Lack of UI
-
-While I'm not a UI expert, I appreciate efficiency. The wrapper integrates with [rofi](https://github.com/DaveDavenport/rofi), [wofi](https://sr.ht/~scoopta/wofi/), or [fzf](https://github.com/junegunn/fzf) to provide a user-friendly interface for selecting resources.
-
-Credential management is handled using [keyring](https://github.com/tmc/keyring), and if credentials are missing, the wrapper prompts for them via [zenity](https://github.com/ncruces/zenity).
-
-Additionally, unlike the macOS version of `sdm`, which opens a browser tab for web resources, the wrapper uses [open](https://github.com/skratchdot/open-golang) to achieve the same on Linux.
+- `sdm-ui dmenu` works best with rofi/wofi in desktop environments
+- `sdm-ui fzf` works in any terminal environment
+- Use blacklist patterns to filter out resources you don't need
+- The cache automatically preserves "last used" information
 
 ### Notes
 
 - **Cross-Platform Testing**: This wrapper has only been tested in the environment where it was developed. If you encounter any issues, contributions or feedback are welcome!
-- **SDM Version**: The wrapper was tested with the `sdm` version 44.31.0.
+- **SDM Version**: The wrapper was tested with the `sdm` version
+  > sdm version 47.50.0 (874de0373de72a563021d2d884f176c9b0f387e6) (crypto)
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
