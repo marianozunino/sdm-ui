@@ -20,7 +20,7 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
-      - darwin
+      #- darwin
 
     ldflags: "-s -w -X github.com/marianozunino/sdm-ui/cmd.Version={{.Version}}"
 
