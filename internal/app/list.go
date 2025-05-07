@@ -70,7 +70,7 @@ func (p *App) GetSortedDataSources() ([]storage.DataSource, error) {
 	log.Debug().Int("count", len(dataSources)).Msg("Retrieved data sources from database")
 
 	if len(dataSources) == 0 {
-		log.Info().Msg("No data sources found, syncing...")
+		log.Debug().Msg("No data sources found, syncing...")
 		if err := p.Sync(); err != nil {
 			log.Error().Err(err).Msg("Sync failed")
 			return nil, err
