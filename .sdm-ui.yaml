@@ -1,2 +1,3 @@
 email: "some.account@example.com"
 verbose: true
+useSSO: true

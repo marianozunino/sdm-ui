@@ -23,6 +23,7 @@ var ErrResourceNotFound = errors.New("resource not found")
 // App represents the main application structure
 type App struct {
 	account string
+	useSSO  bool
 
 	db              *storage.Storage
 	dbPath          string
@@ -92,6 +93,14 @@ func WithTimeout(timeout time.Duration) AppOption {
 func WithContext(ctx context.Context) AppOption {
 	return func(p *App) {
 		p.context = ctx
+	}
+}
+
+// WithSSO enables SSO authentication
+func WithSSO(useSSO bool) AppOption {
+	return func(p *App) {
+		p.useSSO = useSSO
+		log.Debug().Bool("useSSO", useSSO).Msg("SSO authentication configured")
 	}
 }
 
@@ -227,25 +236,14 @@ func (p *App) RetryCommand(exec func() error) error {
 // HandleUnauthorized handles unauthorized errors by re-authenticating
 func (p *App) handleUnauthorized(command func() error) error {
 	notify.Notify("SDM CLI", "🔐 Authenticating...", "", "")
-
-	password, err := p.retrievePassword()
-	if err != nil {
+	if err := p.authenticateUser(); err != nil {
+		if !p.useSSO {
+			p.keyring.DeleteSecret(p.account)
+		}
 		notify.Notify("SDM CLI", "🔐 Authentication error", err.Error(), "")
-		return fmt.Errorf("failed to retrieve password: %w", err)
+		return fmt.Errorf("authentication failed: %w", err)
 	}
-
-	log.Debug().Msg("Logging in...")
-
-	ctx, cancel := context.WithTimeout(p.context, p.timeout)
-	defer cancel()
-
-	if err := p.sdmWrapper.LoginWithContext(ctx, p.account, password); err != nil {
-		p.keyring.DeleteSecret(p.account)
-		notify.Notify("SDM CLI", "🔐 Authentication error", err.Error(), "")
-		return fmt.Errorf("login failed: %w", err)
-	}
-
-	log.Debug().Msg("Login successful")
+	log.Debug().Msg("Authentication successful")
 	return command()
 }
 
@@ -254,4 +252,8 @@ func (p *App) handleInvalidCredentials(err sdm.SDMError) error {
 	notify.Notify("SDM CLI", "🔐 Authentication error", "Invalid credentials", "")
 	p.keyring.DeleteSecret(p.account)
 	return fmt.Errorf("invalid credentials: %w", err)
+}
+
+func (p *App) Logout() error {
+	return p.sdmWrapper.Logout()
 }

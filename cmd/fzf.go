@@ -48,6 +48,7 @@ var fzfCmd = &cobra.Command{
 			app.WithCommand(app.DMenuCommandNoop),
 			app.WithPasswordCommand(app.PasswordCommandCLI),
 			app.WithTimeout(30*time.Second),
+			app.WithSSO(confData.UseSSO),
 		)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to initialize application")

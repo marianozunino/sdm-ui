@@ -28,7 +28,6 @@ import (
 
 	"github.com/adrg/xdg"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
@@ -37,6 +36,7 @@ type config struct {
 	Email             string   `mapstructure:"email"`
 	DBPath            string   `mapstructure:"dbPath"`
 	Verbose           bool     `mapstructure:"verbose"`
+	UseSSO            bool     `mapstructure:"useSSO"`
 	BlacklistPatterns []string `mapstructure:"blacklistPatterns"`
 }
 
@@ -47,6 +47,7 @@ var (
 		Email:             "",
 		DBPath:            xdg.DataHome,
 		Verbose:           false,
+		UseSSO:            false,
 		BlacklistPatterns: []string{},
 	}
 )
@@ -79,13 +80,11 @@ func Execute() {
 // init sets up flags and configuration
 func init() {
 	defaultConfigPath := filepath.Join(xdg.ConfigHome, "sdm-ui.yaml")
-
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", defaultConfigPath, "config file path")
 	rootCmd.PersistentFlags().StringVarP(&confData.Email, "email", "e", "", "email address")
 	rootCmd.PersistentFlags().BoolVarP(&confData.Verbose, "verbose", "v", false, "enable verbose output")
 	rootCmd.PersistentFlags().StringVarP(&confData.DBPath, "db", "d", xdg.DataHome, "database path")
-
-	rootCmd.MarkPersistentFlagRequired("email")
+	rootCmd.PersistentFlags().BoolVarP(&confData.UseSSO, "sso", "s", false, "use SSO")
 }
 
 // loadConfig loads configuration from file and environment
@@ -106,18 +105,28 @@ func loadConfig(cmd *cobra.Command) error {
 		}
 	}
 
-	cmd.Flags().Visit(func(f *pflag.Flag) {
-		viper.Set(f.Name, f.Value.String())
-	})
+	if err := viper.BindPFlag("email", cmd.Flags().Lookup("email")); err != nil {
+		return fmt.Errorf("failed to bind email flag: %w", err)
+	}
+	if err := viper.BindPFlag("verbose", cmd.Flags().Lookup("verbose")); err != nil {
+		return fmt.Errorf("failed to bind verbose flag: %w", err)
+	}
+	if err := viper.BindPFlag("dbPath", cmd.Flags().Lookup("db")); err != nil {
+		return fmt.Errorf("failed to bind db flag: %w", err)
+	}
+	if err := viper.BindPFlag("useSSO", cmd.Flags().Lookup("sso")); err != nil {
+		return fmt.Errorf("failed to bind sso flag: %w", err)
+	}
 
-	cmd.Flags().VisitAll(func(f *pflag.Flag) {
-		if !f.Changed && viper.IsSet(f.Name) {
-			val := viper.Get(f.Name)
-			cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
-		}
-	})
+	if err := viper.Unmarshal(&confData); err != nil {
+		return fmt.Errorf("could not unmarshal config: %w", err)
+	}
 
 	confData.BlacklistPatterns = viper.GetStringSlice("blacklistPatterns")
+
+	if confData.Email == "" {
+		return fmt.Errorf("email is required (provide via --email flag or config file)")
+	}
 
 	return nil
 }

@@ -125,25 +125,35 @@ func (s *SDMClient) Logout() error {
 	return s.LogoutWithContext(context.Background())
 }
 
-// LoginWithContext logs in the user with the provided email and password using the provided context
+// LoginWithContext logs in the user with optional password (empty password = SSO)
 func (s *SDMClient) LoginWithContext(ctx context.Context, email, password string) error {
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, s.timeout)
 	defer cancel()
 
-	stdin := strings.NewReader(password + "\n")
 	var output strings.Builder
-
-	err := s.CommandRunner.RunCommandWithContext(
-		ctxWithTimeout,
+	options := []cmder.CommandOption{
 		cmder.WithArgs("login", "--email", email),
-		cmder.WithStdin(stdin),
 		cmder.WithOutput(&output),
 		cmder.WithErrorParser(parseSdmError),
-	)
+	}
+
+	// Add password via stdin if provided (password auth), otherwise use SSO
+	if password != "" {
+		stdin := strings.NewReader(password + "\n")
+		options = append(options, cmder.WithStdin(stdin))
+	}
+
+	err := s.CommandRunner.RunCommandWithContext(ctxWithTimeout, options...)
 	if err != nil {
+		authType := "SSO"
+		if password != "" {
+			authType = "Password"
+		}
+
 		log.Debug().
 			Err(err).
 			Str("email", email).
+			Str("auth_type", authType).
 			Str("output", output.String()).
 			Msg("Login failed")
 		return fmt.Errorf("login command failed: %w", err)
@@ -151,11 +161,6 @@ func (s *SDMClient) LoginWithContext(ctx context.Context, email, password string
 
 	log.Debug().Str("email", email).Msg("Login successful")
 	return nil
-}
-
-// Login logs in the user with the provided email and password
-func (s *SDMClient) Login(email, password string) error {
-	return s.LoginWithContext(context.Background(), email, password)
 }
 
 // StatusWithContext writes the status of the SDM client to the provided writer using the provided context

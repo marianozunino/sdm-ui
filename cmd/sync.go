@@ -45,6 +45,7 @@ var syncCmd = &cobra.Command{
 			app.WithBlacklist(confData.BlacklistPatterns),
 			app.WithCommand(app.DMenuCommandNoop),
 			app.WithPasswordCommand(app.PasswordCommandCLI),
+			app.WithSSO(confData.UseSSO),
 			app.WithTimeout(30*time.Second),
 		)
 		if err != nil {

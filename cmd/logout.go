@@ -31,21 +31,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// listCmd represents the list command
-var listCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List SDM resources",
-	Long:  `Displays all available SDM resources in a formatted table.`,
-	Example: `  # List all SDM resources
-  sdm-ui list`,
-	Aliases: []string{"ls"},
+// logOutCmd represents the logout command
+var logOutCmd = &cobra.Command{
+	Use:     "logout",
+	Short:   "Log out of SDM UI",
+	Long:    `Logs out of SDM UI by deleting the cache database and forcing a fresh synchronization on next use.`,
+	Example: ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Create application instance
 		application, err := app.NewApp(
 			app.WithAccount(confData.Email),
 			app.WithVerbose(confData.Verbose),
 			app.WithDbPath(confData.DBPath),
-			app.WithBlacklist(confData.BlacklistPatterns),
 			app.WithCommand(app.DMenuCommandNoop),
 			app.WithPasswordCommand(app.PasswordCommandCLI),
 			app.WithSSO(confData.UseSSO),
@@ -64,9 +61,9 @@ var listCmd = &cobra.Command{
 			}
 		}()
 
-		// Run list command with error handling
-		if err := application.List(os.Stdout, true); err != nil {
-			log.Error().Err(err).Msg("List operation failed")
+		// Run wipe command with error handling
+		if err := application.Logout(); err != nil {
+			log.Error().Err(err).Msg("Failed to log out")
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -74,5 +71,9 @@ var listCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(listCmd)
+	rootCmd.AddCommand(logOutCmd)
+
+	// Add usage examples to help text
+	dmenuCmd.Example = `  # Log out
+  sdm-ui logout`
 }

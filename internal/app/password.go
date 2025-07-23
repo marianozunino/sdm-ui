@@ -29,6 +29,27 @@ const (
 	PasswordCommandCLI    PasswordCommand = "cli"    // Use CLI prompt for password
 )
 
+func (p *App) tryKeyringWithTimeout(account string, timeout time.Duration) (string, error) {
+	type result struct {
+		password string
+		err      error
+	}
+
+	resultChan := make(chan result, 1)
+
+	go func() {
+		password, err := p.keyring.GetSecret(account)
+		resultChan <- result{password: password, err: err}
+	}()
+
+	select {
+	case res := <-resultChan:
+		return res.password, res.err
+	case <-time.After(timeout):
+		return "", errors.New("keyring operation timed out - keyring service may not be available")
+	}
+}
+
 // retrievePassword attempts to retrieve the password from the keyring.
 // If the password is not found or an error occurs, it prompts the user to enter the password.
 func (p *App) retrievePassword() (string, error) {
@@ -44,7 +65,7 @@ func (p *App) retrievePassword() (string, error) {
 	defer cancel()
 
 	// Attempt to retrieve the password from the keyring
-	password, err := p.keyring.GetSecret(p.account)
+	password, err := p.tryKeyringWithTimeout(p.account, 2*time.Second)
 	if err == nil && password != "" {
 		log.Debug().Str("account", p.account).Msg("Password retrieved from keyring")
 		return password, nil
@@ -131,5 +152,30 @@ func (p *App) askForPassword(pc PasswordCommand) (string, error) {
 	default:
 		log.Error().Str("command", string(pc)).Msg("Unknown password command")
 		return "", fmt.Errorf("%w: %s", ErrUnknownPasswordCmd, pc)
+	}
+}
+
+// authenticateUser handles both SSO and password-based authentication
+func (p *App) authenticateUser() error {
+	if p.account == "" {
+		log.Error().Msg("No account provided")
+		return fmt.Errorf("no account provided")
+	}
+
+	ctx, cancel := context.WithTimeout(p.context, p.timeout)
+	defer cancel()
+
+	if p.useSSO {
+		log.Debug().Msg("Using SSO authentication")
+		// Empty password = SSO
+		return p.sdmWrapper.LoginWithContext(ctx, p.account, "")
+	} else {
+		log.Debug().Msg("Using password authentication")
+		password, err := p.retrievePassword()
+		if err != nil {
+			return fmt.Errorf("failed to retrieve password: %w", err)
+		}
+		// Provided password = password auth
+		return p.sdmWrapper.LoginWithContext(ctx, p.account, password)
 	}
 }

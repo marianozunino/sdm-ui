@@ -58,6 +58,7 @@ var dmenuCmd = &cobra.Command{
 			app.WithVerbose(confData.Verbose),
 			app.WithDbPath(confData.DBPath),
 			app.WithBlacklist(confData.BlacklistPatterns),
+			app.WithSSO(confData.UseSSO),
 			commandOption,
 			app.WithTimeout(30*time.Second),
 		)
